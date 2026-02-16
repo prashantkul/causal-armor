@@ -49,6 +49,16 @@ flowchart LR
 
 The **agent** proposes an action. The **proxy** scores how likely that action is. They're different models — the proxy is smaller and cheaper, and it never generates text, only scores.
 
+**What are "ablated variants"?** "Ablation" means removal — borrowed from scientific terminology. We send the same conversation to the proxy multiple times, each time with one piece taken out. These are the "ablated variants" — versions of the conversation with specific components removed so we can measure their individual influence.
+
+| Variant | What's removed | Why we send it |
+|---------|---------------|----------------|
+| **Full context** | Nothing | Baseline — how likely is this action normally? |
+| **User-ablated** | User's request removed | Would this action happen if the user never asked? |
+| **Span-ablated** | One tool result removed | Would this action happen without this tool result? |
+
+By comparing scores across these variants, we learn what's actually driving the agent's action. If removing the user barely changes the score but removing a tool result tanks it — that tool result is the real driver, not the user. That's the fingerprint of an injection attack.
+
 ## What Passes Between Them
 
 Two things flow from the agent side to the proxy:
