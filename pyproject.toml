@@ -3,7 +3,34 @@ name = "causal-armor"
 version = "0.1.0"
 description = "Efficient Indirect Prompt Injection guardrails via causal attribution"
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
+authors = [
+    {name = "Prashant Kulkarni", email = "kulkarniprashants@gmail.com"},
+]
+keywords = [
+    "llm",
+    "security",
+    "prompt-injection",
+    "causal-attribution",
+    "guardrails",
+    "ai-safety",
+    "tool-use",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
 dependencies = [
     "httpx>=0.25",
 ]
@@ -15,6 +42,12 @@ gemini = ["google-genai>=1.0"]
 litellm = ["litellm>=1.0"]
 all = ["openai>=1.0", "anthropic>=0.30", "google-genai>=1.0", "litellm>=1.0"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "respx>=0.21"]
+
+[project.urls]
+Homepage = "https://github.com/prashantkul/causal-armor"
+Repository = "https://github.com/prashantkul/causal-armor"
+Documentation = "https://github.com/prashantkul/causal-armor/tree/master/docs"
+Issues = "https://github.com/prashantkul/causal-armor/issues"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
