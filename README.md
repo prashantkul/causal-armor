@@ -188,4 +188,4 @@ src/causal_armor/
 
 ## License
 
-TBD
+[MIT](LICENSE)
