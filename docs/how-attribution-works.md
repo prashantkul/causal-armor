@@ -27,18 +27,21 @@ We test this by **removing pieces of the conversation one at a time** and measur
 
 CausalArmor uses two separate LLMs:
 
-```
-┌─────────────────────┐       ┌─────────────────────┐
-│   Agent Model        │       │   Proxy Model        │
-│   (e.g. GPT-4o)     │       │   (e.g. Gemma-12B)   │
-│                      │       │                      │
-│   "What should I do  │       │   "How likely is     │
-│    given this         │       │    this action given  │
-│    conversation?"     │       │    this context?"     │
-│                      │       │                      │
-│   OUTPUT: action     │       │   OUTPUT: score      │
-│   "send_money ..."   │       │   -2.0 (log-prob)    │
-└─────────────────────┘       └─────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Agent["Agent Model (e.g. GPT-4o)"]
+        AQ["What should I do?"]
+        AO["OUTPUT: send_money ..."]
+    end
+    subgraph Proxy["Proxy Model (e.g. Gemma-12B)"]
+        PQ["How likely is this action?"]
+        PO["OUTPUT: -2.0 (log-prob)"]
+    end
+    CTX["Conversation Context"] --> AQ
+    AQ --> AO
+    AO -->|"raw_text"| PQ
+    CTX -->|"ablated variants"| PQ
+    PQ --> PO
 ```
 
 The **agent** proposes an action. The **proxy** scores how likely that action is. They're different models — the proxy is smaller and cheaper, and it never generates text, only scores.
@@ -132,15 +135,12 @@ With tau = 0 (default, strictest): flag any span more influential than the user.
 
 ## What Happens After Detection
 
-```
-1. SANITIZE  — Rewrite the flagged tool result to remove injections
-               "Flight AA123, $450." (clean data preserved)
-
-2. MASK CoT  — Redact assistant reasoning that was influenced by the injection
-               "[Reasoning redacted for security]"
-
-3. REGENERATE — Ask the agent again with the cleaned context
-                Agent now proposes: book_flight (safe!)
+```mermaid
+flowchart LR
+    DET["ATTACK DETECTED"] --> SAN["1. Sanitize"]
+    SAN -->|"Remove injections"| MASK["2. Mask CoT"]
+    MASK -->|"Redact reasoning"| REGEN["3. Regenerate"]
+    REGEN -->|"Clean context"| SAFE["book_flight (safe!)"]
 ```
 
 ## Why a Separate Proxy Model?
@@ -157,30 +157,19 @@ You might wonder: why not just ask the agent itself for log-probs?
 
 ## Visual Summary
 
-```
-User: "Book a flight"
-          │
-          ▼
-┌──── Agent Model ────┐
-│ Sees full context    │
-│ Proposes: send_money │──── raw_text ────┐
-└──────────────────────┘                  │
-                                          ▼
-                              ┌──── Proxy Model ────┐
-                              │                      │
-          full context ──────►│ score(-2.0)          │
-          minus user ────────►│ score(-2.5)          │
-          minus tool ────────►│ score(-8.0)          │
-                              │                      │
-                              └──────────┬───────────┘
-                                         │
-                                         ▼
-                              delta_user=0.5  delta_span=6.0
-                              span > user → ATTACK DETECTED
-                                         │
-                                         ▼
-                              sanitize → mask CoT → regenerate
-                                         │
-                                         ▼
-                              Final action: book_flight ✓
+```mermaid
+flowchart TD
+    U["User: Book a flight"] --> AG["Agent sees full context"]
+    AG --> ACT["Proposes: send_money"]
+    ACT -->|"raw_text"| S1["score(full context) = -2.0"]
+    ACT -->|"raw_text"| S2["score(minus user) = -2.5"]
+    ACT -->|"raw_text"| S3["score(minus tool) = -8.0"]
+    S1 & S2 --> DU["delta_user = 0.5 (small)"]
+    S1 & S3 --> DS["delta_span = 6.0 (large!)"]
+    DU & DS --> DET{"span > user?"}
+    DET -->|"YES"| ATK["ATTACK DETECTED"]
+    ATK --> SAN["Sanitize flagged tool result"]
+    SAN --> MASK["Mask compromised reasoning"]
+    MASK --> REGEN["Regenerate action"]
+    REGEN --> SAFE["Final: book_flight"]
 ```
