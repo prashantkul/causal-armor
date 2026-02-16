@@ -9,6 +9,7 @@ No SDK dependency — just httpx (core dep).
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 
 import httpx
@@ -48,13 +49,13 @@ class VLLMProxyProvider:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000",
-        model: str = "google/gemma-3-12b-it",
+        base_url: str | None = None,
+        model: str | None = None,
         *,
         timeout: float = 30.0,
     ) -> None:
-        self._base_url = base_url.rstrip("/")
-        self._model = model
+        self._base_url = (base_url or os.environ.get("CAUSAL_ARMOR_PROXY_BASE_URL", "http://localhost:8000")).rstrip("/")
+        self._model = model or os.environ.get("CAUSAL_ARMOR_PROXY_MODEL", "google/gemma-3-12b-it")
         self._client = httpx.AsyncClient(timeout=timeout)
 
     async def log_prob(self, messages: Sequence[Message], action_text: str) -> float:

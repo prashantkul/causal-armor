@@ -1,5 +1,9 @@
 """CausalArmor — Indirect Prompt Injection guardrails via causal attribution."""
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from causal_armor.attribution import compute_attribution
 from causal_armor.config import CausalArmorConfig
 from causal_armor.context import StructuredContext, build_structured_context

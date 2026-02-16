@@ -6,6 +6,7 @@ Requires the ``anthropic`` optional dependency: ``pip install causal-armor[anthr
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -79,12 +80,12 @@ class AnthropicActionProvider:
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-5-20250929",
+        model: str | None = None,
         tools: list[dict[str, Any]] | None = None,
         client: anthropic.AsyncAnthropic | None = None,
         max_tokens: int = 4096,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "claude-sonnet-4-5-20250929")
         self._tools = tools
         self._client = client or anthropic.AsyncAnthropic()
         self._max_tokens = max_tokens
@@ -139,10 +140,10 @@ class AnthropicSanitizerProvider:
 
     def __init__(
         self,
-        model: str = "claude-haiku-4-5-20251001",
+        model: str | None = None,
         client: anthropic.AsyncAnthropic | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "claude-haiku-4-5-20251001")
         self._client = client or anthropic.AsyncAnthropic()
 
     async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:

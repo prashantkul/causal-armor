@@ -6,6 +6,7 @@ Requires the ``google-genai`` optional dependency: ``pip install causal-armor[ge
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -69,11 +70,11 @@ class GeminiActionProvider:
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str | None = None,
         tools: list[Any] | None = None,
         client: genai.Client | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "gemini-2.5-flash")
         self._tools = tools
         self._client = client or genai.Client()
 
@@ -127,10 +128,10 @@ class GeminiSanitizerProvider:
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str | None = None,
         client: genai.Client | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gemini-2.5-flash")
         self._client = client or genai.Client()
 
     async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:

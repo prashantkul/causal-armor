@@ -7,6 +7,7 @@ Requires the ``litellm`` optional dependency: ``pip install causal-armor[litellm
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -51,10 +52,10 @@ class LiteLLMActionProvider:
 
     def __init__(
         self,
-        model: str = "gpt-4o",
+        model: str | None = None,
         tools: list[dict[str, Any]] | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "gpt-4o")
         self._tools = tools
 
     async def generate(self, messages: Sequence[Message]) -> tuple[str, list[ToolCall]]:
@@ -100,8 +101,8 @@ class LiteLLMSanitizerProvider:
         Any LiteLLM-supported model string.
     """
 
-    def __init__(self, model: str = "gpt-4o-mini") -> None:
-        self._model = model
+    def __init__(self, model: str | None = None) -> None:
+        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini")
 
     async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
@@ -136,8 +137,8 @@ class LiteLLMProxyProvider:
         LiteLLM model string pointing to a completions-capable model.
     """
 
-    def __init__(self, model: str = "text-davinci-003") -> None:
-        self._model = model
+    def __init__(self, model: str | None = None) -> None:
+        self._model = model or os.environ.get("CAUSAL_ARMOR_PROXY_MODEL", "text-davinci-003")
 
     async def log_prob(self, messages: Sequence[Message], action_text: str) -> float:
         # Build a flat prompt from messages

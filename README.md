@@ -96,6 +96,31 @@ Copy `.env.example` to `.env` and fill in your values. Key settings:
 | `enable_cot_masking` | `True` | Redact compromised reasoning before regeneration |
 | `max_loo_batch_size` | `None` | Cap on concurrent proxy scoring calls |
 
+### Model configuration via environment variables
+
+All provider model defaults can be overridden with environment variables — no code changes needed. This follows the same pattern used by the OpenAI SDK (`OPENAI_API_KEY`), Anthropic SDK, etc.
+
+| Env var | Role | Used by | Default |
+|---------|------|---------|---------|
+| `CAUSAL_ARMOR_PROXY_MODEL` | LOO scoring proxy | `VLLMProxyProvider`, `LiteLLMProxyProvider` | Provider-specific |
+| `CAUSAL_ARMOR_PROXY_BASE_URL` | vLLM server URL | `VLLMProxyProvider` | `http://localhost:8000` |
+| `CAUSAL_ARMOR_SANITIZER_MODEL` | Content sanitizer | `GeminiSanitizerProvider`, `OpenAISanitizerProvider`, `AnthropicSanitizerProvider`, `LiteLLMSanitizerProvider` | Provider-specific |
+| `CAUSAL_ARMOR_ACTION_MODEL` | Action regeneration | `GeminiActionProvider`, `OpenAIActionProvider`, `AnthropicActionProvider`, `LiteLLMActionProvider` | Provider-specific |
+
+Precedence: **explicit constructor arg > env var > hardcoded default**.
+
+```python
+import os
+from causal_armor.providers.openai import OpenAISanitizerProvider
+
+# Env var takes effect when no arg is passed
+os.environ["CAUSAL_ARMOR_SANITIZER_MODEL"] = "gpt-4o"
+s = OpenAISanitizerProvider()  # uses gpt-4o
+
+# Explicit arg still wins
+s = OpenAISanitizerProvider(model="gpt-4o-mini")  # uses gpt-4o-mini
+```
+
 ## Documentation
 
 - **[How Attribution Works](docs/how-attribution-works.md)** — Plain-English guide to the core mechanism. Start here.

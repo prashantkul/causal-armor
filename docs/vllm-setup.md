@@ -42,36 +42,73 @@ curl http://localhost:8000/v1/models
 
 ## 3. Configure CausalArmor
 
+### Via environment variables (recommended)
+
+Set these in your `.env` (loaded automatically by causal-armor):
+
+```bash
+CAUSAL_ARMOR_PROXY_BASE_URL=http://localhost:8000
+CAUSAL_ARMOR_PROXY_MODEL=google/gemma-3-12b-it
+```
+
+Then instantiate with zero args — the provider reads from env:
+
 ```python
 from causal_armor import CausalArmorMiddleware, CausalArmorConfig
 from causal_armor.providers.vllm import VLLMProxyProvider
 
-proxy = VLLMProxyProvider(
-    base_url="http://localhost:8000",
-    model="google/gemma-3-12b-it",
-)
-
 middleware = CausalArmorMiddleware(
     action_provider=your_action_provider,
-    proxy_provider=proxy,
+    proxy_provider=VLLMProxyProvider(),
     sanitizer_provider=your_sanitizer_provider,
     config=CausalArmorConfig(margin_tau=0.0),
 )
 ```
 
-Or use environment variables:
+### Via explicit constructor args
+
+Constructor args always take precedence over env vars:
 
 ```python
-import os
-from causal_armor.providers.vllm import VLLMProxyProvider
-
 proxy = VLLMProxyProvider(
-    base_url=os.getenv("VLLM_BASE_URL", "http://localhost:8000"),
-    model=os.getenv("VLLM_MODEL", "google/gemma-3-12b-it"),
+    base_url="http://localhost:8000",
+    model="google/gemma-3-12b-it",
 )
 ```
 
-## 4. How the proxy scoring works
+## 4. Verify the setup
+
+After starting vLLM, verify it returns logprobs correctly:
+
+```bash
+curl -s http://localhost:8000/v1/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "google/gemma-3-12b-it",
+    "prompt": "User: Book a flight to Paris\nAssistant: Sure, booking flight AA123.",
+    "max_tokens": 0,
+    "echo": true,
+    "logprobs": 1
+  }' | python -m json.tool
+```
+
+You should see a response with `token_logprobs`, `tokens`, and `text_offset` arrays. Example output:
+
+```
+Token                   LogProb  Offset
+──────────────────── ──────────  ──────
+'<bos>'                    None       0
+'User'                 -13.464       5
+':'                    -10.018       9
+' Book'                -15.181      10
+' a'                    -0.429      15
+' flight'               -0.667      17
+...
+```
+
+The first token (`<bos>`) has `None` logprob (no prior context). All subsequent tokens should have valid negative logprob values. This is exactly what CausalArmor sums over the action tokens for LOO attribution.
+
+## 5. How the proxy scoring works
 
 CausalArmor calls vLLM's `/v1/completions` endpoint (not chat) with:
 
@@ -109,7 +146,7 @@ flowchart LR
     SUM --> TOTAL["Total: -0.5"]:::score
 ```
 
-## 5. Performance tips
+## 6. Performance tips
 
 ### Batch size
 
@@ -172,7 +209,7 @@ proxy = VLLMProxyProvider(
 )
 ```
 
-## 6. Alternative proxy models
+## 7. Alternative proxy models
 
 While the paper uses Gemma-3-12B-IT, any model served by vLLM that supports logprobs works. The paper tested several families:
 

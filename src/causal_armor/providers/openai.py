@@ -6,6 +6,7 @@ Requires the ``openai`` optional dependency: ``pip install causal-armor[openai]`
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -51,11 +52,11 @@ class OpenAIActionProvider:
 
     def __init__(
         self,
-        model: str = "gpt-4o",
+        model: str | None = None,
         tools: list[dict[str, Any]] | None = None,
         client: openai.AsyncOpenAI | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "gpt-4o")
         self._tools = tools
         self._client = client or openai.AsyncOpenAI()
 
@@ -106,10 +107,10 @@ class OpenAISanitizerProvider:
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str | None = None,
         client: openai.AsyncOpenAI | None = None,
     ) -> None:
-        self._model = model
+        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini")
         self._client = client or openai.AsyncOpenAI()
 
     async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
