@@ -29,15 +29,18 @@ CausalArmor uses two separate LLMs:
 
 ```mermaid
 flowchart LR
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef data fill:#607D8B,color:#fff,stroke:#37474F
     subgraph Agent["Agent Model (e.g. GPT-4o)"]
-        AQ["What should I do?"]
-        AO["OUTPUT: send_money ..."]
+        AQ["What should I do?"]:::agent
+        AO["OUTPUT: send_money ..."]:::agent
     end
     subgraph Proxy["Proxy Model (e.g. Gemma-12B)"]
-        PQ["How likely is this action?"]
-        PO["OUTPUT: -2.0 (log-prob)"]
+        PQ["How likely is this action?"]:::proxy
+        PO["OUTPUT: -2.0 (log-prob)"]:::proxy
     end
-    CTX["Conversation Context"] --> AQ
+    CTX["Conversation Context"]:::data --> AQ
     AQ --> AO
     AO -->|"raw_text"| PQ
     CTX -->|"ablated variants"| PQ
@@ -137,10 +140,14 @@ With tau = 0 (default, strictest): flag any span more influential than the user.
 
 ```mermaid
 flowchart LR
-    DET["ATTACK DETECTED"] --> SAN["1. Sanitize"]
-    SAN -->|"Remove injections"| MASK["2. Mask CoT"]
-    MASK -->|"Redact reasoning"| REGEN["3. Regenerate"]
-    REGEN -->|"Clean context"| SAFE["book_flight (safe!)"]
+    classDef detect fill:#f44336,color:#fff,stroke:#B71C1C
+    classDef sanitize fill:#FF9800,color:#fff,stroke:#E65100
+    classDef mask fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef regen fill:#4CAF50,color:#fff,stroke:#2E7D32
+    DET["ATTACK DETECTED"]:::detect --> SAN["1. Sanitize"]:::sanitize
+    SAN -->|"Remove injections"| MASK["2. Mask CoT"]:::mask
+    MASK -->|"Redact reasoning"| REGEN["3. Regenerate"]:::regen
+    REGEN -->|"Clean context"| SAFE["book_flight (safe!)"]:::regen
 ```
 
 ## Why a Separate Proxy Model?
@@ -159,17 +166,23 @@ You might wonder: why not just ask the agent itself for log-probs?
 
 ```mermaid
 flowchart TD
-    U["User: Book a flight"] --> AG["Agent sees full context"]
-    AG --> ACT["Proposes: send_money"]
-    ACT -->|"raw_text"| S1["score(full context) = -2.0"]
-    ACT -->|"raw_text"| S2["score(minus user) = -2.5"]
-    ACT -->|"raw_text"| S3["score(minus tool) = -8.0"]
-    S1 & S2 --> DU["delta_user = 0.5 (small)"]
-    S1 & S3 --> DS["delta_span = 6.0 (large!)"]
-    DU & DS --> DET{"span > user?"}
-    DET -->|"YES"| ATK["ATTACK DETECTED"]
-    ATK --> SAN["Sanitize flagged tool result"]
-    SAN --> MASK["Mask compromised reasoning"]
-    MASK --> REGEN["Regenerate action"]
-    REGEN --> SAFE["Final: book_flight"]
+    classDef user fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef score fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef detect fill:#f44336,color:#fff,stroke:#B71C1C
+    classDef defend fill:#00897B,color:#fff,stroke:#004D40
+    U["User: Book a flight"]:::user --> AG["Agent sees full context"]:::agent
+    AG --> ACT["Proposes: send_money"]:::agent
+    ACT -->|"raw_text"| S1["score(full context) = -2.0"]:::proxy
+    ACT -->|"raw_text"| S2["score(minus user) = -2.5"]:::proxy
+    ACT -->|"raw_text"| S3["score(minus tool) = -8.0"]:::proxy
+    S1 & S2 --> DU["delta_user = 0.5 (small)"]:::score
+    S1 & S3 --> DS["delta_span = 6.0 (large!)"]:::score
+    DU & DS --> DET{"span > user?"}:::detect
+    DET -->|"YES"| ATK["ATTACK DETECTED"]:::detect
+    ATK --> SAN["Sanitize flagged tool result"]:::defend
+    SAN --> MASK["Mask compromised reasoning"]:::defend
+    MASK --> REGEN["Regenerate action"]:::defend
+    REGEN --> SAFE["Final: book_flight"]:::user
 ```
