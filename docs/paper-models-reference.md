@@ -6,18 +6,49 @@ Models used in the CausalArmor paper (arXiv:2602.07918) and their roles.
 
 ```mermaid
 flowchart LR
-    classDef agent fill:#2196F3,color:#fff,stroke:#333
-    classDef proxy fill:#FF9800,color:#fff,stroke:#333
-    classDef san fill:#4CAF50,color:#fff,stroke:#333
-    classDef baseline fill:#607D8B,color:#fff,stroke:#333
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef san fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef baseline fill:#607D8B,color:#fff,stroke:#37474F
+    classDef output fill:#E1F5FE,color:#333,stroke:#1565C0
+    classDef output2 fill:#FFF3E0,color:#333,stroke:#E65100
+    classDef output3 fill:#E8F5E9,color:#333,stroke:#2E7D32
+    classDef output4 fill:#ECEFF1,color:#333,stroke:#37474F
     AG["Agent Backbone (M_agent)"]:::agent
     PR["Proxy Model (M_proxy)"]:::proxy
     SN["Sanitizer (M_san)"]:::san
     BL["Classifier Baselines"]:::baseline
-    AG --> |"Proposes actions"| ACT["Tool-call actions Y_t"]
-    PR --> |"Scores log-probs"| LOO["LOO Attribution"]
-    SN --> |"Cleans flagged spans"| DEF["Sanitized content"]
-    BL --> |"Binary detection"| CLS["Injection / Clean"]
+    AG -->|"Proposes actions"| ACT["Tool-call actions Y_t"]:::output
+    PR -->|"Scores log-probs"| LOO["LOO Attribution"]:::output2
+    SN -->|"Cleans flagged spans"| DEF["Sanitized content"]:::output3
+    BL -->|"Binary detection"| CLS["Injection / Clean"]:::output4
+```
+
+```mermaid
+flowchart TD
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef san fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef mw fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef result fill:#00897B,color:#fff,stroke:#004D40
+    subgraph Agents
+        G25["Gemini-2.5-Flash"]:::agent
+        G3P["Gemini-3-Pro"]:::agent
+        C4S["Claude-4.0-Sonnet"]:::agent
+    end
+    subgraph Proxies
+        GEM12["Gemma-3-12B-IT (default)"]:::proxy
+        GEM["Gemma-3: 1B to 27B"]:::proxy
+        QW["Qwen3: 1.7B to 32B"]:::proxy
+        MIN["Ministral: 3B to 14B"]:::proxy
+    end
+    subgraph Sanitizer
+        SAN["Gemini-2.5-Flash"]:::san
+    end
+    Agents -->|"proposes action"| MW["CausalArmor Guard"]:::mw
+    Proxies -->|"scores log-probs"| MW
+    MW -->|"if attack"| Sanitizer
+    Sanitizer --> RES["Safe action"]:::result
 ```
 
 ## Agent Backbones (M_agent)
@@ -85,6 +116,27 @@ Used for comparison against CausalArmor's causal attribution approach.
 | **Gemini-3-Pro** | Generated the two novel attack templates (`task_dependency`, `tool_output_hijack`) |
 
 ## Mapping to CausalArmor Code
+
+```mermaid
+flowchart LR
+    classDef proto fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef san fill:#4CAF50,color:#fff,stroke:#2E7D32
+    AP["ActionProvider"]:::proto
+    PP["ProxyProvider"]:::proto
+    SP["SanitizerProvider"]:::proto
+    AP --- OAI["OpenAI"]:::agent
+    AP --- ANT["Anthropic"]:::agent
+    AP --- GEM["Gemini"]:::agent
+    AP --- LIT1["LiteLLM"]:::agent
+    PP --- VLLM["vLLM + Gemma-12B"]:::proxy
+    PP --- LIT2["LiteLLM"]:::proxy
+    SP --- OAI2["OpenAI"]:::san
+    SP --- ANT2["Anthropic"]:::san
+    SP --- GEM2["Gemini"]:::san
+    SP --- LIT3["LiteLLM"]:::san
+```
 
 | Paper role | Protocol | Recommended provider | Config |
 |-----------|----------|---------------------|--------|
