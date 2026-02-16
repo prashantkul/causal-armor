@@ -2,6 +2,16 @@
 
 CausalArmor uses a **proxy model** to score log-probabilities for LOO (Leave-One-Out) causal attribution. The paper recommends [vLLM](https://github.com/vllm-project/vllm) serving **Gemma-3-12B-IT** as the proxy model.
 
+```mermaid
+flowchart LR
+    classDef ca fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef vllm fill:#FF9800,color:#fff,stroke:#E65100
+    classDef gpu fill:#607D8B,color:#fff,stroke:#37474F
+    CA["CausalArmor"]:::ca -->|"HTTP POST /v1/completions"| VLLM["vLLM Server"]:::vllm
+    VLLM -->|"Gemma-3-12B-IT"| GPU["GPU (A100)"]:::gpu
+    VLLM -->|"log-probs"| CA
+```
+
 ## 1. Install vLLM
 
 ```bash
@@ -81,11 +91,45 @@ CausalArmor calls vLLM's `/v1/completions` endpoint (not chat) with:
 
 The provider then sums log-probabilities for **action tokens only** (skipping prompt tokens using `text_offset`).
 
+```mermaid
+flowchart LR
+    classDef prompt fill:#607D8B,color:#fff,stroke:#37474F
+    classDef action fill:#FF9800,color:#fff,stroke:#E65100
+    classDef score fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef skip fill:#ECEFF1,color:#666,stroke:#B0BEC5
+    P1["System: ..."]:::skip
+    P2["User: ..."]:::skip
+    P3["Tool: ..."]:::skip
+    P4["Assistant:"]:::skip
+    A1["send_money"]:::action
+    A2["amount=10000"]:::action
+    P1 --> P2 --> P3 --> P4 --> A1 --> A2
+    A1 -->|"-0.3"| SUM["Sum log-probs"]:::score
+    A2 -->|"-0.2"| SUM
+    SUM --> TOTAL["Total: -0.5"]:::score
+```
+
 ## 5. Performance tips
 
 ### Batch size
 
-LOO attribution makes `2 + |S_t|` concurrent proxy calls per decision point (full context + user-ablated + one per untrusted span). Use `max_loo_batch_size` to cap concurrency:
+LOO attribution makes `2 + |S_t|` concurrent proxy calls per decision point (full context + user-ablated + one per untrusted span). All calls run in parallel through vLLM:
+
+```mermaid
+flowchart LR
+    classDef ca fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef full fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef ablate fill:#f44336,color:#fff,stroke:#B71C1C
+    classDef vllm fill:#FF9800,color:#fff,stroke:#E65100
+    CA["CausalArmor"]:::ca
+    CA --> F["Full context"]:::full
+    CA --> U["Minus user"]:::ablate
+    CA --> S1["Minus span 1"]:::ablate
+    CA --> S2["Minus span 2"]:::ablate
+    F & U & S1 & S2 -->|"concurrent"| V["vLLM Server"]:::vllm
+```
+
+Use `max_loo_batch_size` to cap concurrency:
 
 ```python
 config = CausalArmorConfig(
@@ -130,7 +174,23 @@ proxy = VLLMProxyProvider(
 
 ## 6. Alternative proxy models
 
-While the paper uses Gemma-3-12B-IT, any model served by vLLM that supports logprobs works:
+While the paper uses Gemma-3-12B-IT, any model served by vLLM that supports logprobs works. The paper tested several families:
+
+```mermaid
+flowchart TD
+    classDef best fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef good fill:#FF9800,color:#fff,stroke:#E65100
+    classDef partial fill:#FFC107,color:#333,stroke:#F57F17
+    classDef weak fill:#f44336,color:#fff,stroke:#B71C1C
+    classDef vllm fill:#607D8B,color:#fff,stroke:#37474F
+    V["vLLM Server"]:::vllm
+    V --- G12["Gemma-3-12B-IT (default)"]:::best
+    V --- G27["Gemma-3-27B"]:::best
+    V --- Q14["Qwen3-14B"]:::best
+    V --- M14["Ministral-14B"]:::good
+    V --- G4["Gemma-3-4B"]:::partial
+    V --- G1["Gemma-3-1B"]:::weak
+```
 
 ```bash
 # Llama-based proxy
