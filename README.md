@@ -102,6 +102,52 @@ Copy `.env.example` to `.env` and fill in your values. Key settings:
 - **[Paper Models Reference](docs/paper-models-reference.md)** — All models used in the paper and their roles.
 - **[vLLM Setup Guide](docs/vllm-setup.md)** — Setting up the proxy model server.
 
+## Architecture
+
+CausalArmor sits as a middleware between the agent and tool execution. It intercepts the agent's proposed action, checks whether it's being driven by the user or by an untrusted tool result, and defends if needed.
+
+### Where CausalArmor sits
+
+```mermaid
+flowchart LR
+    classDef user fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef guard fill:#9C27B0,color:#fff,stroke:#6A1B9A
+    classDef tool fill:#FF9800,color:#fff,stroke:#E65100
+    classDef attack fill:#f44336,color:#fff,stroke:#B71C1C
+    U["User"]:::user -->|"request"| AG["Agent (LLM)"]:::agent
+    T["External Tools"]:::tool -->|"results (may contain injections)"| AG
+    AG -->|"proposed action"| CA["CausalArmor Guard"]:::guard
+    CA -->|"safe action"| EXEC["Tool Execution"]:::tool
+    CA -.->|"blocked action"| BLOCK["Rejected"]:::attack
+```
+
+### The guard pipeline
+
+```mermaid
+flowchart TD
+    classDef input fill:#607D8B,color:#fff,stroke:#37474F
+    classDef build fill:#2196F3,color:#fff,stroke:#1565C0
+    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
+    classDef detect fill:#f44336,color:#fff,stroke:#B71C1C
+    classDef defend fill:#4CAF50,color:#fff,stroke:#2E7D32
+    classDef skip fill:#ECEFF1,color:#666,stroke:#B0BEC5
+    IN["Messages + Proposed Action"]:::input
+    IN --> PRIV{"Privileged tool?"}:::skip
+    PRIV -->|"Yes"| PASS["Pass through"]:::skip
+    PRIV -->|"No"| CTX["Build StructuredContext"]:::build
+    CTX --> SPANS{"Untrusted spans?"}:::skip
+    SPANS -->|"No"| PASS
+    SPANS -->|"Yes"| ATTR["LOO Attribution via Proxy"]:::proxy
+    ATTR --> DET{"Span dominates user?"}:::detect
+    DET -->|"No"| PASS
+    DET -->|"Yes"| SAN["Sanitize flagged spans"]:::defend
+    SAN --> MASK["Mask chain-of-thought"]:::defend
+    MASK --> REGEN["Regenerate action"]:::defend
+    REGEN --> SAFE["DefenseResult (safe action)"]:::defend
+    PASS --> OUT["DefenseResult (original action)"]:::skip
+```
+
 ## How it works
 
 1. **Agent proposes an action** (e.g. `send_money`)
