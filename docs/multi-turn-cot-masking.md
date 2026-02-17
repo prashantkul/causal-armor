@@ -11,6 +11,12 @@ This works well in **single-turn** scenarios (e.g. AgentDojo benchmarks) where t
 In **multi-turn** conversations, this breaks down:
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+    'actorBkg': '#fef3c7', 'actorBorder': '#d97706', 'actorTextColor': '#1e1e1e',
+    'signalColor': '#1e1e1e', 'signalTextColor': '#1e1e1e',
+    'noteBkgColor': '#fee2e2', 'noteTextColor': '#991b1b', 'noteBorderColor': '#f87171',
+    'activationBkgColor': '#fef9c3', 'activationBorderColor': '#eab308'
+}}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -21,20 +27,26 @@ sequenceDiagram
     A->>T: read_travel_plan()
     T-->>A: PDF with injection
 
-    Note over A: Turn 2 — Agent internalizes the injection
-    Note over A: "I need to call send_money<br/>with amount=5000..."
-    A->>G: send_money(5000)
+    rect rgba(254, 202, 202, 0.3)
+        Note over A: Turn 2 — Agent internalizes the injection
+        Note over A: "I need to call send_money<br/>with amount=5000..."
+        A->>G: send_money(5000)
+    end
 
-    Note over G,P: LOO Attribution on full context
-    G->>P: Score full context (includes agent reasoning)
-    G->>P: Score minus user
-    G->>P: Score minus tool result
+    rect rgba(253, 230, 138, 0.3)
+        Note over G,P: LOO Attribution on full context
+        G->>P: Score full context (includes agent reasoning)
+        G->>P: Score minus user
+        G->>P: Score minus tool result
+    end
 
     Note over P: Agent reasoning still says<br/>"I need to call send_money"<br/>even with tool result removed!
     P-->>G: delta_user = -0.23<br/>delta_tool = -0.20
 
-    Note over G: Both deltas negative<br/>NO DETECTION
-    G->>T: send_money passes through!
+    rect rgba(239, 68, 68, 0.2)
+        Note over G: Both deltas negative<br/>NO DETECTION
+        G->>T: send_money passes through!
+    end
 ```
 
 ### Why It Happens
@@ -48,6 +60,12 @@ When LOO ablates the tool result, this reasoning **stays in the context**. The p
 Mask assistant messages after the first untrusted span **before** LOO scoring:
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+    'actorBkg': '#dbeafe', 'actorBorder': '#2563eb', 'actorTextColor': '#1e1e1e',
+    'signalColor': '#1e1e1e', 'signalTextColor': '#1e1e1e',
+    'noteBkgColor': '#d1fae5', 'noteTextColor': '#065f46', 'noteBorderColor': '#34d399',
+    'activationBkgColor': '#e0f2fe', 'activationBorderColor': '#0284c7'
+}}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -62,20 +80,26 @@ sequenceDiagram
     Note over A: "I need to call send_money..."
     A->>G: send_money(5000)
 
-    Note over G: Pre-mask CoT before scoring
-    G->>G: Replace agent reasoning with<br/>"[Reasoning redacted]"
+    rect rgba(59, 130, 246, 0.15)
+        Note over G: Pre-mask CoT before scoring
+        G->>G: Replace agent reasoning with<br/>"[Reasoning redacted]"
+    end
 
-    Note over G,P: LOO Attribution on masked context
-    G->>P: Score full (masked) context
-    G->>P: Score minus user
-    G->>P: Score minus tool result
+    rect rgba(253, 230, 138, 0.3)
+        Note over G,P: LOO Attribution on masked context
+        G->>P: Score full (masked) context
+        G->>P: Score minus user
+        G->>P: Score minus tool result
+    end
 
     Note over P: Without agent reasoning<br/>removing tool result now has<br/>a massive effect!
     P-->>G: delta_user = -0.39<br/>delta_tool = +10.57
 
-    Note over G: ATTACK DETECTED!<br/>Tool 27x more influential
-    G->>G: Sanitize + Mask CoT + Regenerate
-    G->>T: book_flight(AA 1742)
+    rect rgba(34, 197, 94, 0.2)
+        Note over G: ATTACK DETECTED!<br/>Tool 27x more influential
+        G->>G: Sanitize + Mask CoT + Regenerate
+        G->>T: book_flight(AA 1742)
+    end
 ```
 
 This is conceptually consistent with the paper's context decomposition C_t = (U, H_t, S_t) — assistant reasoning is an **agent output**, not an independent input component. Including it during attribution confounds the causal signal.
@@ -109,12 +133,23 @@ With assistant reasoning masked, removing the tool result now drastically drops 
 ### The Difference
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4ecdc4'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {
+    'xyChart': {
+        'plotColorPalette': '#dc2626, #16a34a',
+        'titleColor': '#1e1e1e',
+        'xAxisLabelColor': '#374151',
+        'xAxisTitleColor': '#374151',
+        'yAxisLabelColor': '#374151',
+        'yAxisTitleColor': '#374151',
+        'backgroundColor': '#f8fafc'
+    }
+}}}%%
 xychart-beta
     title "Tool Result Delta: Before vs After CoT Masking"
     x-axis ["Without Masking", "With Masking"]
     y-axis "delta_tool (normalized)" -2 --> 12
-    bar [-0.1963, 10.5699]
+    bar [-0.1963, 0]
+    bar [0, 10.5699]
 ```
 
 The tool result's causal influence goes from **-0.20** (invisible) to **+10.57** (dominant) — a complete reversal that reveals the true attack signal.
@@ -148,6 +183,8 @@ CAUSAL_ARMOR_MASK_COT_FOR_SCORING=true
 ```
 
 Set `mask_cot_for_scoring = false` to get the paper's original algorithm (no pre-LOO masking).
+
+See [cot-propagation-effect.md](cot-propagation-effect.md) for a concise overview of the CoT propagation effect and its relationship to the paper.
 
 ## Trace Links
 
