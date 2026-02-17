@@ -11,7 +11,27 @@ This works well in **single-turn** scenarios (e.g. AgentDojo benchmarks) where t
 In **multi-turn** conversations, this breaks down:
 
 ```mermaid
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {
+    'background': '#ffffff',
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e3a5f',
+    'primaryBorderColor': '#3b82f6',
+    'secondaryColor': '#fef3c7',
+    'secondaryTextColor': '#78350f',
+    'secondaryBorderColor': '#f59e0b',
+    'tertiaryColor': '#f0fdf4',
+    'lineColor': '#334155',
+    'textColor': '#1e293b',
+    'actorBkg': '#3b82f6',
+    'actorBorder': '#2563eb',
+    'actorTextColor': '#ffffff',
+    'actorLineColor': '#94a3b8',
+    'noteBkgColor': '#fef9c3',
+    'noteTextColor': '#713f12',
+    'noteBorderColor': '#eab308',
+    'signalColor': '#334155',
+    'signalTextColor': '#1e293b'
+}}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -22,13 +42,13 @@ sequenceDiagram
     A->>T: read_travel_plan()
     T-->>A: PDF with injection
 
-    rect rgba(239, 68, 68, 0.12)
+    rect rgba(239, 68, 68, 0.1)
         Note over A: Turn 2 — Agent internalizes the injection
         Note over A: "I need to call send_money<br/>with amount=5000..."
         A->>G: send_money(5000)
     end
 
-    rect rgba(234, 179, 8, 0.12)
+    rect rgba(249, 115, 22, 0.08)
         Note over G,P: LOO Attribution on full context
         G->>P: Score full context (includes agent reasoning)
         G->>P: Score minus user
@@ -38,7 +58,7 @@ sequenceDiagram
     Note over P: Agent reasoning still says<br/>"I need to call send_money"<br/>even with tool result removed!
     P-->>G: delta_user = -0.23<br/>delta_tool = -0.20
 
-    rect rgba(239, 68, 68, 0.15)
+    rect rgba(220, 38, 38, 0.12)
         Note over G: Both deltas negative<br/>NO DETECTION
         G->>T: send_money passes through!
     end
@@ -55,7 +75,27 @@ When LOO ablates the tool result, this reasoning **stays in the context**. The p
 Mask assistant messages after the first untrusted span **before** LOO scoring:
 
 ```mermaid
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {
+    'background': '#ffffff',
+    'primaryColor': '#dbeafe',
+    'primaryTextColor': '#1e3a5f',
+    'primaryBorderColor': '#3b82f6',
+    'secondaryColor': '#fef3c7',
+    'secondaryTextColor': '#78350f',
+    'secondaryBorderColor': '#f59e0b',
+    'tertiaryColor': '#f0fdf4',
+    'lineColor': '#334155',
+    'textColor': '#1e293b',
+    'actorBkg': '#0d9488',
+    'actorBorder': '#0f766e',
+    'actorTextColor': '#ffffff',
+    'actorLineColor': '#94a3b8',
+    'noteBkgColor': '#d1fae5',
+    'noteTextColor': '#065f46',
+    'noteBorderColor': '#34d399',
+    'signalColor': '#334155',
+    'signalTextColor': '#1e293b'
+}}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -70,12 +110,12 @@ sequenceDiagram
     Note over A: "I need to call send_money..."
     A->>G: send_money(5000)
 
-    rect rgba(59, 130, 246, 0.12)
+    rect rgba(59, 130, 246, 0.1)
         Note over G: Pre-mask CoT before scoring
         G->>G: Replace agent reasoning with<br/>"[Reasoning redacted]"
     end
 
-    rect rgba(234, 179, 8, 0.12)
+    rect rgba(249, 115, 22, 0.08)
         Note over G,P: LOO Attribution on masked context
         G->>P: Score full (masked) context
         G->>P: Score minus user
@@ -85,7 +125,7 @@ sequenceDiagram
     Note over P: Without agent reasoning<br/>removing tool result now has<br/>a massive effect!
     P-->>G: delta_user = -0.39<br/>delta_tool = +10.57
 
-    rect rgba(22, 163, 74, 0.15)
+    rect rgba(22, 163, 74, 0.1)
         Note over G: ATTACK DETECTED!<br/>Tool 27x more influential
         G->>G: Sanitize + Mask CoT + Regenerate
         G->>T: book_flight(AA 1742)
@@ -123,8 +163,8 @@ With assistant reasoning masked, removing the tool result now drastically drops 
 ### The Difference
 
 ```mermaid
-%%{init: {'theme': 'default', 'themeVariables': {
-    'xyChart': {'plotColorPalette': '#dc2626, #16a34a'}
+%%{init: {'theme': 'base', 'themeVariables': {
+    'xyChart': {'plotColorPalette': '#dc2626, #16a34a', 'backgroundColor': '#ffffff'}
 }}}%%
 xychart-beta
     title "Tool Result Delta: Before vs After CoT Masking"
