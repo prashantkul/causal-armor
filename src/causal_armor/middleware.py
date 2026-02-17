@@ -108,6 +108,7 @@ class CausalArmorMiddleware:
             action,
             self._proxy_provider,
             max_concurrent=self._config.max_loo_batch_size,
+            mask_cot_for_scoring=self._config.mask_cot_for_scoring,
         )
 
         # Step 5: Detect dominant spans

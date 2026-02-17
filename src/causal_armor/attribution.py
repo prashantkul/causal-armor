@@ -20,6 +20,7 @@ async def compute_attribution(
     proxy: ProxyProvider,
     *,
     max_concurrent: int | None = None,
+    mask_cot_for_scoring: bool = True,
 ) -> AttributionResult:
     """Batched leave-one-out attribution over the structured context.
 
@@ -36,6 +37,11 @@ async def compute_attribution(
         Proxy model for log-prob scoring.
     max_concurrent:
         Optional cap on concurrent proxy calls. ``None`` means no limit.
+    mask_cot_for_scoring:
+        If ``True``, mask assistant messages after the first untrusted
+        span before LOO scoring.  This prevents the agent's own poisoned
+        reasoning from masking the true causal signal in multi-turn
+        conversations.
 
     Returns
     -------
@@ -45,6 +51,21 @@ async def compute_attribution(
     action_text = action.raw_text
     # Rough token count approximation (word-level split, per paper)
     action_token_count = max(len(action_text.split()), 1)
+
+    # Optionally mask CoT before LOO scoring.  In multi-turn conversations
+    # the agent's reasoning may propagate injected instructions (e.g. the
+    # AI says "I need to call send_money").  If left in context, ablating
+    # the tool result has little effect because the AI's text still drives
+    # the action.  Masking assistant messages after the first untrusted
+    # span isolates the true causal influence of external inputs.
+    scoring_ctx = ctx
+    if mask_cot_for_scoring and ctx.has_untrusted_spans:
+        k_min = min(
+            span.context_index for span in ctx.untrusted_spans.values()
+        )
+        scoring_ctx = ctx.mask_assistant_messages_after(
+            k_min, "[Reasoning redacted]"
+        )
 
     sem = asyncio.Semaphore(max_concurrent) if max_concurrent else None
 
@@ -59,18 +80,18 @@ async def compute_attribution(
     # Build all ablation variants
     tasks: list[asyncio.Task[tuple[str, float]]] = []
 
-    # Base: full context
-    tasks.append(asyncio.ensure_future(_score(ctx.full_messages, "_base")))
+    # Base: full context (CoT-masked)
+    tasks.append(asyncio.ensure_future(_score(scoring_ctx.full_messages, "_base")))
 
     # User-ablated
     tasks.append(
-        asyncio.ensure_future(_score(ctx.messages_without_user_request(), "_user"))
+        asyncio.ensure_future(_score(scoring_ctx.messages_without_user_request(), "_user"))
     )
 
     # Span-ablated (one per untrusted span)
-    for span_id in ctx.span_ids:
+    for span_id in scoring_ctx.span_ids:
         tasks.append(
-            asyncio.ensure_future(_score(ctx.messages_without_span(span_id), span_id))
+            asyncio.ensure_future(_score(scoring_ctx.messages_without_span(span_id), span_id))
         )
 
     results = await asyncio.gather(*tasks)

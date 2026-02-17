@@ -99,7 +99,7 @@ class GeminiActionProvider:
         raw_text = response.text or ""
         tool_calls: list[ToolCall] = []
 
-        if response.candidates:
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 if part.function_call:
                     fc = part.function_call

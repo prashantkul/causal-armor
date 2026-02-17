@@ -9,6 +9,7 @@ No SDK dependency — just httpx (core dep).
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Sequence
 
@@ -32,6 +33,35 @@ def _messages_to_prompt(messages: Sequence[Message]) -> str:
             label = f"Tool({m.tool_name})" if m.tool_name else "Tool"
             parts.append(f"{label}: {m.content}")
     return "\n".join(parts)
+
+
+def _normalize_action_text(action_text: str) -> str:
+    """Convert action text to a natural-language form for log-prob scoring.
+
+    Instruction-tuned proxy models (e.g. Gemma) produce poor log-probs
+    when asked to score raw JSON tool calls because they don't naturally
+    emit JSON blobs.  Converting to a natural-language function call
+    format (``I will call func(arg=val)``) yields much more meaningful
+    LOO deltas.
+
+    If ``action_text`` is already in natural-language form (not JSON),
+    it is returned unchanged.
+    """
+    try:
+        parsed = json.loads(action_text)
+    except (json.JSONDecodeError, TypeError):
+        return action_text
+
+    if not isinstance(parsed, dict):
+        return action_text
+
+    name = parsed.get("name")
+    arguments = parsed.get("arguments")
+    if name and isinstance(arguments, dict):
+        args_str = ", ".join(f"{k}={v!r}" for k, v in arguments.items())
+        return f"I will call {name}({args_str})"
+
+    return action_text
 
 
 class VLLMProxyProvider:
@@ -66,6 +96,7 @@ class VLLMProxyProvider:
         tokens only.
         """
         prompt = _messages_to_prompt(messages)
+        action_text = _normalize_action_text(action_text)
         full_prompt = f"{prompt}\nAssistant: {action_text}"
 
         payload = {
