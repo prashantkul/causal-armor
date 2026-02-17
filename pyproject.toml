@@ -1,12 +1,12 @@
 [project]
 name = "causal-armor"
-version = "0.1.5"
+version = "0.1.6"
 description = "Efficient Indirect Prompt Injection guardrails via causal attribution"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [
-    {name = "Prashant Kulkarni", email = "kulkarniprashants@gmail.com"},
+    {name = "Prashant Kulkarni"},
 ]
 keywords = [
     "llm",
