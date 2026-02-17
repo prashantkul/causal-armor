@@ -92,13 +92,14 @@ pip install causal-armor[dev]
 
 Copy `.env.example` to `.env` and fill in your values. Key settings:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `margin_tau` | `0.0` | Detection threshold. 0 = flag any span more influential than the user |
-| `privileged_tools` | `frozenset()` | Tool names that skip attribution (trusted) |
-| `enable_sanitization` | `True` | Rewrite flagged spans before regeneration |
-| `enable_cot_masking` | `True` | Redact compromised reasoning before regeneration |
-| `max_loo_batch_size` | `None` | Cap on concurrent proxy scoring calls |
+| Setting | Default | Phase | Description |
+|---------|---------|-------|-------------|
+| `margin_tau` | `0.0` | Scoring | Detection threshold. 0 = flag any span more influential than the user |
+| `mask_cot_for_scoring` | `True` | Scoring | Mask assistant reasoning before LOO scoring to isolate causal signals |
+| `max_loo_batch_size` | `None` | Scoring | Cap on concurrent proxy scoring calls |
+| `privileged_tools` | `frozenset()` | Both | Tool names that skip attribution entirely (trusted) |
+| `enable_sanitization` | `True` | Regeneration | Rewrite flagged spans before regeneration |
+| `enable_cot_masking` | `True` | Regeneration | Redact compromised reasoning before regeneration |
 
 ### Model configuration via environment variables
 
@@ -145,12 +146,25 @@ CausalArmor sits as a middleware between the agent and tool execution. It interc
 
 ## How it works
 
+CausalArmor operates in two phases:
+
+### Phase 1: Scoring (attribution + detection)
+
+Determines *what's driving* the agent's proposed action.
+
 1. **Agent proposes an action** (e.g. `send_money`)
-2. **CausalArmor builds ablated contexts** — removes the user request, removes each untrusted tool result
-3. **Pre-scoring CoT mask** — redacts assistant reasoning after the first untrusted span to isolate causal signals
-4. **Proxy model scores each variant** — "how likely is this action without piece X?"
-5. **Detection** — if a tool result is more influential than the user's request, it's flagged
-6. **Defense** — sanitize the flagged content, mask compromised reasoning again, regenerate the action
+2. **Build structured context** — decompose the conversation into user request, history, and untrusted tool spans
+3. **Mask CoT for scoring** — redact assistant reasoning after the first untrusted span to isolate the true causal signal (prevents poisoned reasoning from hiding injections)
+4. **LOO attribution** — remove each component one at a time and score via the proxy model: "how likely is this action without piece X?"
+5. **Detection** — if a tool result is more influential than the user's request, it's flagged as an injection
+
+### Phase 2: Regeneration (defense)
+
+Produces a *safe action* from a cleaned context. Only runs if an attack is detected.
+
+6. **Sanitize** — rewrite flagged tool results to remove injected instructions while preserving legitimate content
+7. **Mask CoT for regeneration** — redact assistant reasoning again so the agent isn't re-influenced by its own compromised thoughts
+8. **Regenerate** — ask the agent to propose a new action given the cleaned context
 
 See [How Attribution Works](docs/how-attribution-works.md) for the full explanation with examples and diagrams.
 
