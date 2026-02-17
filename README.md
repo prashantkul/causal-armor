@@ -137,45 +137,11 @@ CausalArmor sits as a middleware between the agent and tool execution. It interc
 
 ### Where CausalArmor sits
 
-```mermaid
-flowchart LR
-    classDef user fill:#4CAF50,color:#fff,stroke:#2E7D32
-    classDef agent fill:#2196F3,color:#fff,stroke:#1565C0
-    classDef guard fill:#9C27B0,color:#fff,stroke:#6A1B9A
-    classDef tool fill:#FF9800,color:#fff,stroke:#E65100
-    classDef attack fill:#f44336,color:#fff,stroke:#B71C1C
-    U["User"]:::user -->|"request"| AG["Agent (LLM)"]:::agent
-    T["External Tools"]:::tool -->|"results (may contain injections)"| AG
-    AG -->|"proposed action"| CA["CausalArmor Guard"]:::guard
-    CA -->|"safe action"| EXEC["Tool Execution"]:::tool
-    CA -.->|"blocked action"| BLOCK["Rejected"]:::attack
-```
+![Where CausalArmor sits](https://mermaid.ink/img/Zmxvd2NoYXJ0IExSCiAgICBjbGFzc0RlZiB1c2VyIGZpbGw6IzRDQUY1MCxjb2xvcjojZmZmLHN0cm9rZTojMkU3RDMyCiAgICBjbGFzc0RlZiBhZ2VudCBmaWxsOiMyMTk2RjMsY29sb3I6I2ZmZixzdHJva2U6IzE1NjVDMAogICAgY2xhc3NEZWYgZ3VhcmQgZmlsbDojOUMyN0IwLGNvbG9yOiNmZmYsc3Ryb2tlOiM2QTFCOUEKICAgIGNsYXNzRGVmIHRvb2wgZmlsbDojRkY5ODAwLGNvbG9yOiNmZmYsc3Ryb2tlOiNFNjUxMDAKICAgIGNsYXNzRGVmIGF0dGFjayBmaWxsOiNmNDQzMzYsY29sb3I6I2ZmZixzdHJva2U6I0I3MUMxQwogICAgVVsiVXNlciJdOjo6dXNlciAtLT58InJlcXVlc3QifCBBR1siQWdlbnQgKExMTSkiXTo6OmFnZW50CiAgICBUWyJFeHRlcm5hbCBUb29scyJdOjo6dG9vbCAtLT58InJlc3VsdHMgKG1heSBjb250YWluIGluamVjdGlvbnMpInwgQUcKICAgIEFHIC0tPnwicHJvcG9zZWQgYWN0aW9uInwgQ0FbIkNhdXNhbEFybW9yIEd1YXJkIl06OjpndWFyZAogICAgQ0EgLS0-fCJzYWZlIGFjdGlvbiJ8IEVYRUNbIlRvb2wgRXhlY3V0aW9uIl06Ojp0b29sCiAgICBDQSAtLi0-fCJibG9ja2VkIGFjdGlvbiJ8IEJMT0NLWyJSZWplY3RlZCJdOjo6YXR0YWNr?type=png)
 
 ### The guard pipeline
 
-```mermaid
-flowchart TD
-    classDef input fill:#607D8B,color:#fff,stroke:#37474F
-    classDef build fill:#2196F3,color:#fff,stroke:#1565C0
-    classDef proxy fill:#FF9800,color:#fff,stroke:#E65100
-    classDef detect fill:#f44336,color:#fff,stroke:#B71C1C
-    classDef defend fill:#4CAF50,color:#fff,stroke:#2E7D32
-    classDef skip fill:#ECEFF1,color:#666,stroke:#B0BEC5
-    IN["Messages + Proposed Action"]:::input
-    IN --> PRIV{"Privileged tool?"}:::skip
-    PRIV -->|"Yes"| PASS["Pass through"]:::skip
-    PRIV -->|"No"| CTX["Build StructuredContext"]:::build
-    CTX --> SPANS{"Untrusted spans?"}:::skip
-    SPANS -->|"No"| PASS
-    SPANS -->|"Yes"| ATTR["LOO Attribution via Proxy"]:::proxy
-    ATTR --> DET{"Span dominates user?"}:::detect
-    DET -->|"No"| PASS
-    DET -->|"Yes"| SAN["Sanitize flagged spans"]:::defend
-    SAN --> MASK["Mask chain-of-thought"]:::defend
-    MASK --> REGEN["Regenerate action"]:::defend
-    REGEN --> SAFE["DefenseResult (safe action)"]:::defend
-    PASS --> OUT["DefenseResult (original action)"]:::skip
-```
+![The guard pipeline](https://mermaid.ink/img/Zmxvd2NoYXJ0IFRECiAgICBjbGFzc0RlZiBpbnB1dCBmaWxsOiM2MDdEOEIsY29sb3I6I2ZmZixzdHJva2U6IzM3NDc0RgogICAgY2xhc3NEZWYgYnVpbGQgZmlsbDojMjE5NkYzLGNvbG9yOiNmZmYsc3Ryb2tlOiMxNTY1QzAKICAgIGNsYXNzRGVmIHByb3h5IGZpbGw6I0ZGOTgwMCxjb2xvcjojZmZmLHN0cm9rZTojRTY1MTAwCiAgICBjbGFzc0RlZiBkZXRlY3QgZmlsbDojZjQ0MzM2LGNvbG9yOiNmZmYsc3Ryb2tlOiNCNzFDMUMKICAgIGNsYXNzRGVmIGRlZmVuZCBmaWxsOiM0Q0FGNTAsY29sb3I6I2ZmZixzdHJva2U6IzJFN0QzMgogICAgY2xhc3NEZWYgc2tpcCBmaWxsOiNFQ0VGRjEsY29sb3I6IzY2NixzdHJva2U6I0IwQkVDNQogICAgSU5bIk1lc3NhZ2VzICsgUHJvcG9zZWQgQWN0aW9uIl06OjppbnB1dAogICAgSU4gLS0-IFBSSVZ7IlByaXZpbGVnZWQgdG9vbD8ifTo6OnNraXAKICAgIFBSSVYgLS0-fCJZZXMifCBQQVNTWyJQYXNzIHRocm91Z2giXTo6OnNraXAKICAgIFBSSVYgLS0-fCJObyJ8IENUWFsiQnVpbGQgU3RydWN0dXJlZENvbnRleHQiXTo6OmJ1aWxkCiAgICBDVFggLS0-IFNQQU5TeyJVbnRydXN0ZWQgc3BhbnM_In06Ojpza2lwCiAgICBTUEFOUyAtLT58Ik5vInwgUEFTUwogICAgU1BBTlMgLS0-fCJZZXMifCBBVFRSWyJMT08gQXR0cmlidXRpb24gdmlhIFByb3h5Il06Ojpwcm94eQogICAgQVRUUiAtLT4gREVUeyJTcGFuIGRvbWluYXRlcyB1c2VyPyJ9Ojo6ZGV0ZWN0CiAgICBERVQgLS0-fCJObyJ8IFBBU1MKICAgIERFVCAtLT58IlllcyJ8IFNBTlsiU2FuaXRpemUgZmxhZ2dlZCBzcGFucyJdOjo6ZGVmZW5kCiAgICBTQU4gLS0-IE1BU0tbIk1hc2sgY2hhaW4tb2YtdGhvdWdodCJdOjo6ZGVmZW5kCiAgICBNQVNLIC0tPiBSRUdFTlsiUmVnZW5lcmF0ZSBhY3Rpb24iXTo6OmRlZmVuZAogICAgUkVHRU4gLS0-IFNBRkVbIkRlZmVuc2VSZXN1bHQgKHNhZmUgYWN0aW9uKSJdOjo6ZGVmZW5kCiAgICBQQVNTIC0tPiBPVVRbIkRlZmVuc2VSZXN1bHQgKG9yaWdpbmFsIGFjdGlvbikiXTo6OnNraXA?type=png)
 
 ## How it works
 
