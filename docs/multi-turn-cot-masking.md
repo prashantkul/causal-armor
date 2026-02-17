@@ -11,7 +11,7 @@ This works well in **single-turn** scenarios (e.g. AgentDojo benchmarks) where t
 In **multi-turn** conversations, this breaks down:
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeCSS': '.body{background:#ffffff}', 'themeVariables': {
+%%{init: {'theme': 'base', 'themeVariables': {
     'background': '#ffffff',
     'primaryColor': '#dbeafe',
     'primaryTextColor': '#1e3a5f',
@@ -75,7 +75,7 @@ When LOO ablates the tool result, this reasoning **stays in the context**. The p
 Mask assistant messages after the first untrusted span **before** LOO scoring:
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeCSS': '.body{background:#ffffff}', 'themeVariables': {
+%%{init: {'theme': 'base', 'themeVariables': {
     'background': '#ffffff',
     'primaryColor': '#dbeafe',
     'primaryTextColor': '#1e3a5f',

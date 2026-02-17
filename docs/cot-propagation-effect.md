@@ -18,7 +18,7 @@ Consider a travel agent that reads a PDF containing an injection payload disguis
 4. **Guard runs**: LOO attribution on context that now includes the agent's reasoning from step 3
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeCSS': '.body{background:#ffffff}', 'themeVariables': {
+%%{init: {'theme': 'base', 'themeVariables': {
     'background': '#ffffff',
     'primaryColor': '#dbeafe',
     'primaryTextColor': '#1e3a5f',
@@ -79,7 +79,7 @@ When LOO ablates the tool result, the agent's reasoning still explicitly endorse
 CausalArmor masks all assistant messages after the first untrusted span **before** LOO scoring. This masked context is used for all ablation variants (base, user-ablated, span-ablated):
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeCSS': '.body{background:#ffffff}', 'themeVariables': {
+%%{init: {'theme': 'base', 'themeVariables': {
     'background': '#ffffff',
     'primaryColor': '#dbeafe',
     'primaryTextColor': '#1e3a5f',
