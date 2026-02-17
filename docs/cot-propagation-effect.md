@@ -18,13 +18,7 @@ Consider a travel agent that reads a PDF containing an injection payload disguis
 4. **Guard runs**: LOO attribution on context that now includes the agent's reasoning from step 3
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-    'actorBkg': '#fef3c7', 'actorBorder': '#d97706', 'actorTextColor': '#1e1e1e',
-    'signalColor': '#1e1e1e', 'signalTextColor': '#1e1e1e',
-    'noteBkgColor': '#fee2e2', 'noteTextColor': '#991b1b', 'noteBorderColor': '#f87171',
-    'activationBkgColor': '#fef9c3', 'activationBorderColor': '#eab308',
-    'sequenceNumberColor': '#ffffff'
-}}}%%
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -35,13 +29,13 @@ sequenceDiagram
     A->>T: read_travel_plan()
     T-->>A: PDF content + injection
 
-    rect rgba(254, 202, 202, 0.3)
+    rect rgba(220, 38, 38, 0.15)
         Note over A: Turn 2 — Agent internalizes injection
         Note over A: "I need to call send_money<br/>with amount=5000..."
         A->>G: send_money(5000)
     end
 
-    rect rgba(253, 230, 138, 0.3)
+    rect rgba(234, 179, 8, 0.15)
         Note over G,P: LOO Attribution on full context
         G->>P: Score full context (includes agent reasoning)
         G->>P: Score minus user request
@@ -51,7 +45,7 @@ sequenceDiagram
     Note over P: Agent reasoning still says<br/>"I need to call send_money"<br/>even with tool result removed!
     P-->>G: delta_user = -0.23, delta_tool = -0.20
 
-    rect rgba(239, 68, 68, 0.2)
+    rect rgba(220, 38, 38, 0.2)
         Note over G: Both deltas negative — NO DETECTION
         G->>T: send_money passes through
         Note over T: $5,000 stolen
@@ -65,13 +59,7 @@ When LOO ablates the tool result, the agent's reasoning still explicitly endorse
 CausalArmor masks all assistant messages after the first untrusted span **before** LOO scoring. This masked context is used for all ablation variants (base, user-ablated, span-ablated):
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-    'actorBkg': '#dbeafe', 'actorBorder': '#2563eb', 'actorTextColor': '#1e1e1e',
-    'signalColor': '#1e1e1e', 'signalTextColor': '#1e1e1e',
-    'noteBkgColor': '#d1fae5', 'noteTextColor': '#065f46', 'noteBorderColor': '#34d399',
-    'activationBkgColor': '#e0f2fe', 'activationBorderColor': '#0284c7',
-    'sequenceNumberColor': '#ffffff'
-}}}%%
+%%{init: {'theme': 'neutral'}}%%
 sequenceDiagram
     participant A as Agent
     participant G as Guard
@@ -86,12 +74,12 @@ sequenceDiagram
     Note over A: "I need to call send_money..."
     A->>G: send_money(5000)
 
-    rect rgba(59, 130, 246, 0.15)
+    rect rgba(59, 130, 246, 0.2)
         Note over G: Pre-mask CoT before scoring
         G->>G: Replace agent reasoning with<br/>"[Reasoning redacted]"
     end
 
-    rect rgba(253, 230, 138, 0.3)
+    rect rgba(234, 179, 8, 0.15)
         Note over G,P: LOO Attribution on masked context
         G->>P: Score full (masked) context
         G->>P: Score minus user request
@@ -99,7 +87,7 @@ sequenceDiagram
         P-->>G: delta_user = -0.39, delta_tool = +10.57
     end
 
-    rect rgba(34, 197, 94, 0.2)
+    rect rgba(22, 163, 74, 0.2)
         Note over G: ATTACK DETECTED<br/>Tool 27x more influential than user
         G->>G: Sanitize + Mask CoT + Regenerate
         G->>T: book_flight(AA 1742, Alex Johnson)
@@ -138,16 +126,8 @@ Both deltas negative — neither component appears influential because the agent
 The tool's causal influence goes from **-0.20 to +10.57** — a complete reversal revealing the true dominance shift.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-    'xyChart': {
-        'plotColorPalette': '#dc2626, #16a34a',
-        'titleColor': '#1e1e1e',
-        'xAxisLabelColor': '#374151',
-        'xAxisTitleColor': '#374151',
-        'yAxisLabelColor': '#374151',
-        'yAxisTitleColor': '#374151',
-        'backgroundColor': '#f8fafc'
-    }
+%%{init: {'theme': 'neutral', 'themeVariables': {
+    'xyChart': {'plotColorPalette': '#dc2626, #16a34a'}
 }}}%%
 xychart-beta
     title "Tool Result Delta: Before vs After CoT Masking"
