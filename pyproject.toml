@@ -1,6 +1,6 @@
 [project]
 name = "causal-armor"
-version = "0.1.4"
+version = "0.1.5"
 description = "Efficient Indirect Prompt Injection guardrails via causal attribution"
 readme = "README.md"
 license = "MIT"

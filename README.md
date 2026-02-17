@@ -6,7 +6,7 @@
 
 Efficient Indirect Prompt Injection guardrails via causal attribution.
 
-Based on the paper [CausalArmor: Efficient Indirect Prompt Injection Guardrails via Causal Attribution](https://arxiv.org/abs/2602.07918) ([local copy](paper/causal-armor-paper.pdf)).
+Based on the paper [CausalArmor: Efficient Indirect Prompt Injection Guardrails via Causal Attribution](https://arxiv.org/abs/2602.07918) ([local copy](https://github.com/prashantkul/causal-armor/blob/master/paper/causal-armor-paper.pdf)).
 
 ## What it does
 
@@ -56,7 +56,7 @@ if result.was_defended:
     print(f"Safe action: {result.final_action.name}")
 ```
 
-See [`examples/quickstart.py`](examples/quickstart.py) for a full runnable example with mock providers.
+See [`examples/quickstart.py`](https://github.com/prashantkul/causal-armor/blob/master/examples/quickstart.py) for a full runnable example with mock providers.
 
 ## Install
 
@@ -90,7 +90,7 @@ pip install causal-armor[dev]
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your values. Key settings:
+Copy [`.env.example`](https://github.com/prashantkul/causal-armor/blob/master/.env.example) to `.env` and fill in your values. Key settings:
 
 | Setting | Default | Phase | Description |
 |---------|---------|-------|-------------|
@@ -128,9 +128,9 @@ s = OpenAISanitizerProvider(model="gpt-4o-mini")  # uses gpt-4o-mini
 
 ## Documentation
 
-- **[How Attribution Works](docs/how-attribution-works.md)** — Plain-English guide to the core mechanism. Start here.
-- **[Paper Models Reference](docs/paper-models-reference.md)** — All models used in the paper and their roles.
-- **[vLLM Setup Guide](docs/vllm-setup.md)** — Setting up the proxy model server.
+- **[How Attribution Works](https://github.com/prashantkul/causal-armor/blob/master/docs/how-attribution-works.md)** — Plain-English guide to the core mechanism. Start here.
+- **[Paper Models Reference](https://github.com/prashantkul/causal-armor/blob/master/docs/paper-models-reference.md)** — All models used in the paper and their roles.
+- **[vLLM Setup Guide](https://github.com/prashantkul/causal-armor/blob/master/docs/vllm-setup.md)** — Setting up the proxy model server.
 
 ## Architecture
 
@@ -166,7 +166,7 @@ Produces a *safe action* from a cleaned context. Only runs if an attack is detec
 7. **Mask CoT for regeneration** — redact assistant reasoning again so the agent isn't re-influenced by its own compromised thoughts
 8. **Regenerate** — ask the agent to propose a new action given the cleaned context
 
-See [How Attribution Works](docs/how-attribution-works.md) for the full explanation with examples and diagrams.
+See [How Attribution Works](https://github.com/prashantkul/causal-armor/blob/master/docs/how-attribution-works.md) for the full explanation with examples and diagrams.
 
 ## Running tests
 
@@ -206,4 +206,4 @@ src/causal_armor/
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/prashantkul/causal-armor/blob/master/LICENSE)
