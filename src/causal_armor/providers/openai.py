@@ -110,10 +110,14 @@ class OpenAISanitizerProvider:
         model: str | None = None,
         client: openai.AsyncOpenAI | None = None,
     ) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini"
+        )
         self._client = client or openai.AsyncOpenAI()
 
-    async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
+    async def sanitize(
+        self, user_request: str, tool_name: str, untrusted_content: str
+    ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,

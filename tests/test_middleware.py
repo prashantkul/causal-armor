@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from conftest import MockActionProvider, MockProxyAttack, MockProxyBenign, MockSanitizer
 
 from causal_armor import (
     CausalArmorConfig,
@@ -11,8 +12,6 @@ from causal_armor import (
     MessageRole,
     ToolCall,
 )
-from conftest import MockActionProvider, MockProxyAttack, MockProxyBenign, MockSanitizer
-
 
 UNTRUSTED = frozenset({"web_search"})
 
@@ -39,8 +38,12 @@ def benign_middleware():
 
 class TestMiddlewareGuard:
     @pytest.mark.asyncio
-    async def test_attack_detected_and_defended(self, attack_middleware, attack_messages):
-        action = ToolCall(name="send_money", arguments={}, raw_text="send_money amount=10000")
+    async def test_attack_detected_and_defended(
+        self, attack_middleware, attack_messages
+    ):
+        action = ToolCall(
+            name="send_money", arguments={}, raw_text="send_money amount=10000"
+        )
         result = await attack_middleware.guard(
             attack_messages, action, untrusted_tool_names=UNTRUSTED
         )
@@ -52,7 +55,9 @@ class TestMiddlewareGuard:
 
     @pytest.mark.asyncio
     async def test_benign_passthrough(self, benign_middleware, benign_messages):
-        action = ToolCall(name="book_flight", arguments={}, raw_text="book_flight AA123")
+        action = ToolCall(
+            name="book_flight", arguments={}, raw_text="book_flight AA123"
+        )
         result = await benign_middleware.guard(
             benign_messages, action, untrusted_tool_names=UNTRUSTED
         )
@@ -60,7 +65,9 @@ class TestMiddlewareGuard:
         assert result.final_action is action
 
     @pytest.mark.asyncio
-    async def test_no_untrusted_tools_passthrough(self, attack_middleware, attack_messages):
+    async def test_no_untrusted_tools_passthrough(
+        self, attack_middleware, attack_messages
+    ):
         action = ToolCall(name="send_money", arguments={}, raw_text="send_money")
         result = await attack_middleware.guard(
             attack_messages, action, untrusted_tool_names=frozenset()
@@ -75,9 +82,7 @@ class TestMiddlewareGuard:
             MockActionProvider(), MockProxyAttack(), MockSanitizer(), config
         )
         action = ToolCall(name="send_money", arguments={}, raw_text="send_money")
-        result = await mw.guard(
-            attack_messages, action, untrusted_tool_names=UNTRUSTED
-        )
+        result = await mw.guard(attack_messages, action, untrusted_tool_names=UNTRUSTED)
         assert not result.was_defended
         assert result.detection is None
 

@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 from causal_armor.attribution import compute_attribution
 from causal_armor.config import CausalArmorConfig
-from causal_armor.context import StructuredContext, build_structured_context
+from causal_armor.context import build_structured_context
 from causal_armor.defense import defend
 from causal_armor.detection import detect_dominant_spans
 from causal_armor.providers import ActionProvider, ProxyProvider, SanitizerProvider
@@ -37,12 +37,12 @@ class CausalArmorMiddleware:
         action_provider: ActionProvider,
         proxy_provider: ProxyProvider,
         sanitizer_provider: SanitizerProvider,
-        config: CausalArmorConfig = CausalArmorConfig(),
+        config: CausalArmorConfig | None = None,
     ) -> None:
         self._action_provider = action_provider
         self._proxy_provider = proxy_provider
         self._sanitizer_provider = sanitizer_provider
-        self._config = config
+        self._config = config if config is not None else CausalArmorConfig()
 
     @property
     def config(self) -> CausalArmorConfig:
@@ -77,7 +77,10 @@ class CausalArmorMiddleware:
             action, and full detection/defense metadata.
         """
         # Step 1: Check if action targets a privileged tool (skip attribution)
-        if self._config.privileged_tools and action.name in self._config.privileged_tools:
+        if (
+            self._config.privileged_tools
+            and action.name in self._config.privileged_tools
+        ):
             return DefenseResult(
                 original_action=action,
                 final_action=action,
@@ -86,7 +89,9 @@ class CausalArmorMiddleware:
             )
 
         # Step 2: Build structured context
-        effective_untrusted = untrusted_tool_names if untrusted_tool_names is not None else frozenset()
+        effective_untrusted = (
+            untrusted_tool_names if untrusted_tool_names is not None else frozenset()
+        )
         ctx = build_structured_context(
             messages,
             untrusted_tool_names=effective_untrusted,
@@ -126,7 +131,11 @@ class CausalArmorMiddleware:
 
     async def close(self) -> None:
         """Close any provider resources (e.g. HTTP clients)."""
-        for provider in (self._action_provider, self._proxy_provider, self._sanitizer_provider):
+        for provider in (
+            self._action_provider,
+            self._proxy_provider,
+            self._sanitizer_provider,
+        ):
             close_fn = getattr(provider, "close", None)
             if close_fn and callable(close_fn):
                 await close_fn()

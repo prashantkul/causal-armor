@@ -49,16 +49,18 @@ def _to_anthropic_messages(
         elif m.role is MessageRole.ASSISTANT:
             result.append({"role": "assistant", "content": m.content})
         elif m.role is MessageRole.TOOL:
-            result.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": m.tool_call_id or "",
-                        "content": m.content,
-                    }
-                ],
-            })
+            result.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": m.tool_call_id or "",
+                            "content": m.content,
+                        }
+                    ],
+                }
+            )
 
     return system_prompt, result
 
@@ -85,7 +87,9 @@ class AnthropicActionProvider:
         client: anthropic.AsyncAnthropic | None = None,
         max_tokens: int = 4096,
     ) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "claude-sonnet-4-5-20250929")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_ACTION_MODEL", "claude-sonnet-4-5-20250929"
+        )
         self._tools = tools
         self._client = client or anthropic.AsyncAnthropic()
         self._max_tokens = max_tokens
@@ -143,10 +147,14 @@ class AnthropicSanitizerProvider:
         model: str | None = None,
         client: anthropic.AsyncAnthropic | None = None,
     ) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "claude-haiku-4-5-20251001")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_SANITIZER_MODEL", "claude-haiku-4-5-20251001"
+        )
         self._client = client or anthropic.AsyncAnthropic()
 
-    async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
+    async def sanitize(
+        self, user_request: str, tool_name: str, untrusted_content: str
+    ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,

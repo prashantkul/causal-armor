@@ -151,7 +151,11 @@ def build_structured_context(
 
     untrusted_spans: dict[str, UntrustedSpan] = {}
     for i, m in enumerate(msgs):
-        if m.role is MessageRole.TOOL and m.tool_name and m.tool_name in untrusted_tool_names:
+        if (
+            m.role is MessageRole.TOOL
+            and m.tool_name
+            and m.tool_name in untrusted_tool_names
+        ):
             span_id = f"{m.tool_name}:{i}"
             untrusted_spans[span_id] = UntrustedSpan(
                 span_id=span_id,

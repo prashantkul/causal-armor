@@ -3,7 +3,7 @@ name = "causal-armor"
 version = "0.1.0"
 description = "Efficient Indirect Prompt Injection guardrails via causal attribution"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.11"
 authors = [
     {name = "Prashant Kulkarni", email = "kulkarniprashants@gmail.com"},
@@ -41,7 +41,15 @@ anthropic = ["anthropic>=0.30"]
 gemini = ["google-genai>=1.0"]
 litellm = ["litellm>=1.0"]
 all = ["openai>=1.0", "anthropic>=0.30", "google-genai>=1.0", "litellm>=1.0"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "respx>=0.21"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "build>=1.0",
+    "twine>=6.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/prashantkul/causal-armor"
@@ -51,6 +59,47 @@ Issues = "https://github.com/prashantkul/causal-armor/issues"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["causal_armor"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "openai",
+    "openai.*",
+    "anthropic",
+    "anthropic.*",
+    "google",
+    "google.*",
+    "google.genai",
+    "google.genai.*",
+    "litellm",
+    "litellm.*",
+    "respx",
+    "respx.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "causal_armor.providers.gemini"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

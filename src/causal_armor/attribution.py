@@ -11,7 +11,7 @@ import asyncio
 
 from causal_armor.context import StructuredContext
 from causal_armor.providers import ProxyProvider
-from causal_armor.types import AttributionResult, ToolCall
+from causal_armor.types import AttributionResult, Message, ToolCall
 
 
 async def compute_attribution(
@@ -60,16 +60,12 @@ async def compute_attribution(
     # span isolates the true causal influence of external inputs.
     scoring_ctx = ctx
     if mask_cot_for_scoring and ctx.has_untrusted_spans:
-        k_min = min(
-            span.context_index for span in ctx.untrusted_spans.values()
-        )
-        scoring_ctx = ctx.mask_assistant_messages_after(
-            k_min, "[Reasoning redacted]"
-        )
+        k_min = min(span.context_index for span in ctx.untrusted_spans.values())
+        scoring_ctx = ctx.mask_assistant_messages_after(k_min, "[Reasoning redacted]")
 
     sem = asyncio.Semaphore(max_concurrent) if max_concurrent else None
 
-    async def _score(messages: tuple, label: str) -> tuple[str, float]:
+    async def _score(messages: tuple[Message, ...], label: str) -> tuple[str, float]:
         if sem:
             async with sem:
                 lp = await proxy.log_prob(messages, action_text)
@@ -85,13 +81,17 @@ async def compute_attribution(
 
     # User-ablated
     tasks.append(
-        asyncio.ensure_future(_score(scoring_ctx.messages_without_user_request(), "_user"))
+        asyncio.ensure_future(
+            _score(scoring_ctx.messages_without_user_request(), "_user")
+        )
     )
 
     # Span-ablated (one per untrusted span)
     for span_id in scoring_ctx.span_ids:
         tasks.append(
-            asyncio.ensure_future(_score(scoring_ctx.messages_without_span(span_id), span_id))
+            asyncio.ensure_future(
+                _score(scoring_ctx.messages_without_span(span_id), span_id)
+            )
         )
 
     results = await asyncio.gather(*tasks)

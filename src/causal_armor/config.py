@@ -11,11 +11,10 @@ Configuration is resolved with the following precedence (highest first):
 from __future__ import annotations
 
 import os
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-
-import tomllib
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Env-var helpers
@@ -71,14 +70,14 @@ def _find_toml(start: Path | None = None) -> Path | None:
     return None
 
 
-def _load_toml(path: Path | None = None) -> dict:
+def _load_toml(path: Path | None = None) -> dict[str, Any]:
     """Load and return the ``[causal_armor]`` table, or ``{}`` if missing."""
     toml_path = path or _find_toml()
     if toml_path is None:
         return {}
     with open(toml_path, "rb") as f:
         data = tomllib.load(f)
-    return data.get("causal_armor", data)
+    return dict(data.get("causal_armor", data))
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +144,9 @@ class CausalArmorConfig:
     log_attributions: bool = True
 
     @classmethod
-    def from_env(cls, *, config_path: Path | None = None, **overrides) -> CausalArmorConfig:
+    def from_env(
+        cls, *, config_path: Path | None = None, **overrides: Any
+    ) -> CausalArmorConfig:
         """Build a config from TOML file + env vars + explicit overrides.
 
         Resolution order (highest precedence first):
@@ -159,7 +160,7 @@ class CausalArmorConfig:
         toml = _load_toml(config_path)
 
         # Layer 2: env vars override TOML
-        values: dict = {
+        values: dict[str, Any] = {
             "margin_tau": _env_float(
                 "CAUSAL_ARMOR_MARGIN_TAU",
                 float(toml.get("margin_tau", 0.0)),

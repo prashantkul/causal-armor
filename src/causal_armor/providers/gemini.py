@@ -44,13 +44,25 @@ def _to_gemini_contents(
             else:
                 system_instruction += "\n" + m.content
         elif m.role is MessageRole.USER:
-            contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=m.content)]))
+            contents.append(
+                genai_types.Content(
+                    role="user", parts=[genai_types.Part(text=m.content)]
+                )
+            )
         elif m.role is MessageRole.ASSISTANT:
-            contents.append(genai_types.Content(role="model", parts=[genai_types.Part(text=m.content)]))
+            contents.append(
+                genai_types.Content(
+                    role="model", parts=[genai_types.Part(text=m.content)]
+                )
+            )
         elif m.role is MessageRole.TOOL:
             # Represent tool results as user messages with context
             label = f"[Tool: {m.tool_name}] " if m.tool_name else ""
-            contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=f"{label}{m.content}")]))
+            contents.append(
+                genai_types.Content(
+                    role="user", parts=[genai_types.Part(text=f"{label}{m.content}")]
+                )
+            )
 
     return system_instruction, contents
 
@@ -74,7 +86,9 @@ class GeminiActionProvider:
         tools: list[Any] | None = None,
         client: genai.Client | None = None,
     ) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "gemini-2.5-flash")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_ACTION_MODEL", "gemini-2.5-flash"
+        )
         self._tools = tools
         self._client = client or genai.Client()
 
@@ -99,7 +113,11 @@ class GeminiActionProvider:
         raw_text = response.text or ""
         tool_calls: list[ToolCall] = []
 
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+        if (
+            response.candidates
+            and response.candidates[0].content
+            and response.candidates[0].content.parts
+        ):
             for part in response.candidates[0].content.parts:
                 if part.function_call:
                     fc = part.function_call
@@ -131,10 +149,14 @@ class GeminiSanitizerProvider:
         model: str | None = None,
         client: genai.Client | None = None,
     ) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gemini-2.5-flash")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_SANITIZER_MODEL", "gemini-2.5-flash"
+        )
         self._client = client or genai.Client()
 
-    async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
+    async def sanitize(
+        self, user_request: str, tool_name: str, untrusted_content: str
+    ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,
@@ -144,7 +166,11 @@ class GeminiSanitizerProvider:
         try:
             response = await self._client.aio.models.generate_content(
                 model=self._model,
-                contents=[genai_types.Content(role="user", parts=[genai_types.Part(text=user_msg)])],
+                contents=[
+                    genai_types.Content(
+                        role="user", parts=[genai_types.Part(text=user_msg)]
+                    )
+                ],
                 config=genai_types.GenerateContentConfig(
                     system_instruction=SANITIZATION_SYSTEM_PROMPT,
                 ),

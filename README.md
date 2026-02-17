@@ -1,5 +1,9 @@
 # CausalArmor
 
+[![CI](https://github.com/prashantkul/causal-armor/actions/workflows/ci.yml/badge.svg)](https://github.com/prashantkul/causal-armor/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/causal-armor)](https://pypi.org/project/causal-armor/)
+[![Python versions](https://img.shields.io/pypi/pyversions/causal-armor)](https://pypi.org/project/causal-armor/)
+
 Efficient Indirect Prompt Injection guardrails via causal attribution.
 
 Based on the paper [CausalArmor: Efficient Indirect Prompt Injection Guardrails via Causal Attribution](https://arxiv.org/abs/2602.07918) ([local copy](paper/causal-armor-paper.pdf)).
@@ -188,6 +192,14 @@ See [How Attribution Works](docs/how-attribution-works.md) for the full explanat
 ```bash
 pip install causal-armor[dev]
 pytest tests/ -v
+```
+
+Or use the Makefile for the full check suite:
+
+```bash
+make check    # lint + typecheck + test
+make format   # auto-format with ruff
+make build    # build wheel and sdist
 ```
 
 ## Project structure

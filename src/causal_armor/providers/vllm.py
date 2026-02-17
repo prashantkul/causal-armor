@@ -84,8 +84,13 @@ class VLLMProxyProvider:
         *,
         timeout: float = 30.0,
     ) -> None:
-        self._base_url = (base_url or os.environ.get("CAUSAL_ARMOR_PROXY_BASE_URL", "http://localhost:8000")).rstrip("/")
-        self._model = model or os.environ.get("CAUSAL_ARMOR_PROXY_MODEL", "google/gemma-3-12b-it")
+        self._base_url = (
+            base_url
+            or os.environ.get("CAUSAL_ARMOR_PROXY_BASE_URL", "http://localhost:8000")
+        ).rstrip("/")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_PROXY_MODEL", "google/gemma-3-12b-it"
+        )
         self._client = httpx.AsyncClient(timeout=timeout)
 
     async def log_prob(self, messages: Sequence[Message], action_text: str) -> float:
@@ -134,8 +139,9 @@ class VLLMProxyProvider:
 
         total_lp = 0.0
         for i, offset in enumerate(text_offsets):
-            if offset >= prompt_char_len and token_logprobs[i] is not None:
-                total_lp += token_logprobs[i]
+            lp = token_logprobs[i]
+            if offset >= prompt_char_len and lp is not None:
+                total_lp += lp
 
         return total_lp
 

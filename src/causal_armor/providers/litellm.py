@@ -102,9 +102,13 @@ class LiteLLMSanitizerProvider:
     """
 
     def __init__(self, model: str | None = None) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini"
+        )
 
-    async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
+    async def sanitize(
+        self, user_request: str, tool_name: str, untrusted_content: str
+    ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,
@@ -138,7 +142,9 @@ class LiteLLMProxyProvider:
     """
 
     def __init__(self, model: str | None = None) -> None:
-        self._model = model or os.environ.get("CAUSAL_ARMOR_PROXY_MODEL", "text-davinci-003")
+        self._model = model or os.environ.get(
+            "CAUSAL_ARMOR_PROXY_MODEL", "text-davinci-003"
+        )
 
     async def log_prob(self, messages: Sequence[Message], action_text: str) -> float:
         # Build a flat prompt from messages

@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import pytest
+from conftest import MockActionProvider, MockSanitizer
 
 from causal_armor import (
+    AttributionResult,
     CausalArmorConfig,
+    DetectionResult,
     Message,
     MessageRole,
-    ToolCall,
     build_structured_context,
-    sanitize_flagged_spans,
-    mask_cot_after_detection,
     defend,
-    AttributionResult,
-    DetectionResult,
+    mask_cot_after_detection,
+    sanitize_flagged_spans,
 )
-from conftest import MockSanitizer, MockActionProvider
 
 
 def _make_detection(flagged: frozenset[str], is_attack: bool) -> DetectionResult:
@@ -47,7 +46,10 @@ class TestSanitizeFlaggedSpans:
         )
         assert "web_search:3" in sanitized
         assert new_ctx.full_messages[3].content == "Flight AA123 to Paris, $450."
-        assert new_ctx.untrusted_spans["web_search:3"].content == "Flight AA123 to Paris, $450."
+        assert (
+            new_ctx.untrusted_spans["web_search:3"].content
+            == "Flight AA123 to Paris, $450."
+        )
 
     @pytest.mark.asyncio
     async def test_no_flagged_spans(self, attack_context):
@@ -67,7 +69,7 @@ class TestSanitizeFlaggedSpans:
         ]
         ctx = build_structured_context(msgs, frozenset({"t"}))
         det = _make_detection(frozenset({"t:1", "t:2"}), True)
-        new_ctx, sanitized = await sanitize_flagged_spans(ctx, det, MockSanitizer())
+        _new_ctx, sanitized = await sanitize_flagged_spans(ctx, det, MockSanitizer())
         assert len(sanitized) == 2
 
 
@@ -107,8 +109,12 @@ class TestDefend:
         det = _make_detection(frozenset(), False)
         config = CausalArmorConfig()
         result = await defend(
-            attack_context, malicious_action, det,
-            MockSanitizer(), MockActionProvider(), config,
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            MockActionProvider(),
+            config,
         )
         assert not result.was_defended
         assert result.final_action is malicious_action
@@ -119,8 +125,12 @@ class TestDefend:
         det = _make_detection(frozenset({"web_search:3"}), True)
         config = CausalArmorConfig()
         result = await defend(
-            attack_context, malicious_action, det,
-            MockSanitizer(), MockActionProvider(), config,
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            MockActionProvider(),
+            config,
         )
         assert result.was_defended
         assert result.regenerated
@@ -134,8 +144,12 @@ class TestDefend:
         det = _make_detection(frozenset({"web_search:3"}), True)
         config = CausalArmorConfig(enable_sanitization=False)
         result = await defend(
-            attack_context, malicious_action, det,
-            MockSanitizer(), MockActionProvider(), config,
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            MockActionProvider(),
+            config,
         )
         assert result.was_defended
         assert len(result.sanitized_spans) == 0
@@ -146,8 +160,12 @@ class TestDefend:
         det = _make_detection(frozenset({"web_search:3"}), True)
         config = CausalArmorConfig(enable_cot_masking=False)
         result = await defend(
-            attack_context, malicious_action, det,
-            MockSanitizer(), MockActionProvider(), config,
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            MockActionProvider(),
+            config,
         )
         assert result.was_defended
         assert not result.cot_messages_masked

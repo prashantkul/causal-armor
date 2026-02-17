@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 import respx
-import httpx
 
 from causal_armor import Message, MessageRole
 from causal_armor.providers.vllm import VLLMProxyProvider
-
 
 VLLM_URL = "http://localhost:8000"
 
@@ -44,8 +43,7 @@ async def test_log_prob_sums_action_tokens(vllm_provider):
 
     # The prompt will be "User: Hello\nAssistant: do_thing"
     # "User: Hello\nAssistant: " is the prompt prefix
-    prompt_prefix = "User: Hello\nAssistant: "
-    prefix_len = len(prompt_prefix)
+    prefix_len = len("User: Hello\nAssistant: ")
 
     # Mock: 3 prompt tokens, 2 action tokens
     respx.post(f"{VLLM_URL}/v1/completions").mock(
@@ -130,9 +128,6 @@ async def test_context_manager():
 async def test_log_prob_all_prompt_tokens(vllm_provider):
     """If no tokens fall in action range, return 0.0."""
     messages = [Message(role=MessageRole.USER, content="Hi")]
-    prompt_prefix = "User: Hi\nAssistant: "
-    prefix_len = len(prompt_prefix)
-
     # All offsets are below prefix_len -> no action tokens
     respx.post(f"{VLLM_URL}/v1/completions").mock(
         return_value=httpx.Response(

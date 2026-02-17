@@ -8,11 +8,10 @@ from causal_armor import (
     CausalArmorConfig,
     Message,
     MessageRole,
-    ToolCall,
     StructuredContext,
+    ToolCall,
     build_structured_context,
 )
-
 
 # ---------------------------------------------------------------------------
 # Sample messages
@@ -67,13 +66,19 @@ def post_attack_assistant() -> Message:
 
 
 @pytest.fixture()
-def benign_messages(system_message, user_message, assistant_message, benign_tool_message):
+def benign_messages(
+    system_message, user_message, assistant_message, benign_tool_message
+):
     return [system_message, user_message, assistant_message, benign_tool_message]
 
 
 @pytest.fixture()
 def attack_messages(
-    system_message, user_message, assistant_message, malicious_tool_message, post_attack_assistant
+    system_message,
+    user_message,
+    assistant_message,
+    malicious_tool_message,
+    post_attack_assistant,
 ):
     return [
         system_message,

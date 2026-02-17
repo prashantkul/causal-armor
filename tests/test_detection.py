@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from causal_armor import detect_dominant_spans, AttributionResult
+from causal_armor import AttributionResult, detect_dominant_spans
 
 
 def _make_attribution(

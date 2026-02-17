@@ -4,12 +4,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from causal_armor.attribution import compute_attribution
-from causal_armor.config import CausalArmorConfig
-from causal_armor.context import StructuredContext, build_structured_context
-from causal_armor.defense import defend, mask_cot_after_detection, sanitize_flagged_spans
-from causal_armor.detection import detect_dominant_spans
-from causal_armor.exceptions import (
+from causal_armor.attribution import compute_attribution  # noqa: E402
+from causal_armor.config import CausalArmorConfig  # noqa: E402
+from causal_armor.context import (  # noqa: E402
+    StructuredContext,
+    build_structured_context,
+)
+from causal_armor.defense import (  # noqa: E402
+    defend,
+    mask_cot_after_detection,
+    sanitize_flagged_spans,
+)
+from causal_armor.detection import detect_dominant_spans  # noqa: E402
+from causal_armor.exceptions import (  # noqa: E402
     AttributionError,
     CausalArmorError,
     ConfigurationError,
@@ -17,9 +24,13 @@ from causal_armor.exceptions import (
     ProviderError,
     SanitizationError,
 )
-from causal_armor.middleware import CausalArmorMiddleware
-from causal_armor.providers import ActionProvider, ProxyProvider, SanitizerProvider
-from causal_armor.types import (
+from causal_armor.middleware import CausalArmorMiddleware  # noqa: E402
+from causal_armor.providers import (  # noqa: E402
+    ActionProvider,
+    ProxyProvider,
+    SanitizerProvider,
+)
+from causal_armor.types import (  # noqa: E402
     AttributionResult,
     DefenseResult,
     DetectionResult,
@@ -30,37 +41,29 @@ from causal_armor.types import (
 )
 
 __all__ = [
-    # Algorithm
-    "compute_attribution",
-    "detect_dominant_spans",
-    # Config
-    "CausalArmorConfig",
-    # Defense
-    "defend",
-    "mask_cot_after_detection",
-    "sanitize_flagged_spans",
-    # Context
-    "StructuredContext",
-    "build_structured_context",
-    # Middleware
-    "CausalArmorMiddleware",
-    # Exceptions
+    "ActionProvider",
     "AttributionError",
+    "AttributionResult",
+    "CausalArmorConfig",
     "CausalArmorError",
+    "CausalArmorMiddleware",
     "ConfigurationError",
     "ContextError",
-    "ProviderError",
-    "SanitizationError",
-    # Providers (protocols)
-    "ActionProvider",
-    "ProxyProvider",
-    "SanitizerProvider",
-    # Types
-    "AttributionResult",
     "DefenseResult",
     "DetectionResult",
     "Message",
     "MessageRole",
+    "ProviderError",
+    "ProxyProvider",
+    "SanitizationError",
+    "SanitizerProvider",
+    "StructuredContext",
     "ToolCall",
     "UntrustedSpan",
+    "build_structured_context",
+    "compute_attribution",
+    "defend",
+    "detect_dominant_spans",
+    "mask_cot_after_detection",
+    "sanitize_flagged_spans",
 ]

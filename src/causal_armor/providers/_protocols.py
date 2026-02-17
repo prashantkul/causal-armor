@@ -48,7 +48,9 @@ class ProxyProvider(Protocol):
 class SanitizerProvider(Protocol):
     """M_san: rewrites untrusted content to neutralise injections."""
 
-    async def sanitize(self, user_request: str, tool_name: str, untrusted_content: str) -> str:
+    async def sanitize(
+        self, user_request: str, tool_name: str, untrusted_content: str
+    ) -> str:
         """Sanitize untrusted tool-result content.
 
         Parameters match the slots in ``SANITIZATION_USER_TEMPLATE``:

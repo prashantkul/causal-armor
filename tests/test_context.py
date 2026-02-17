@@ -5,11 +5,10 @@ from __future__ import annotations
 import pytest
 
 from causal_armor import (
+    ContextError,
     Message,
     MessageRole,
-    StructuredContext,
     build_structured_context,
-    ContextError,
 )
 
 
@@ -102,7 +101,9 @@ class TestStructuredContext:
             Message(role=MessageRole.SYSTEM, content="System"),
             Message(role=MessageRole.USER, content="User request"),
             Message(role=MessageRole.ASSISTANT, content="Thinking..."),
-            Message(role=MessageRole.TOOL, content="Untrusted data", tool_name="tool_a"),
+            Message(
+                role=MessageRole.TOOL, content="Untrusted data", tool_name="tool_a"
+            ),
             Message(role=MessageRole.ASSISTANT, content="Based on tool result..."),
         ]
         return build_structured_context(msgs, frozenset({"tool_a"}))

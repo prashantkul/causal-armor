@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import pytest
-
-from causal_armor import compute_attribution, ToolCall
-
 from conftest import MockProxyAttack, MockProxyBenign
+
+from causal_armor import ToolCall, compute_attribution
 
 
 @pytest.mark.asyncio
 async def test_attack_attribution(attack_context, malicious_action):
-    attr = await compute_attribution(attack_context, malicious_action, MockProxyAttack())
+    attr = await compute_attribution(
+        attack_context, malicious_action, MockProxyAttack()
+    )
 
     # Span should have much higher delta than user
     span_id = "web_search:3"
