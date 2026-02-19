@@ -76,15 +76,30 @@ class TestMiddlewareGuard:
         assert result.detection is None
 
     @pytest.mark.asyncio
-    async def test_privileged_tool_skips_attribution(self, attack_messages):
+    async def test_non_privileged_tool_skips_attribution(self, attack_messages):
+        """When privileged_tools is set, non-privileged actions skip defense."""
         config = CausalArmorConfig(privileged_tools=frozenset({"send_money"}))
         mw = CausalArmorMiddleware(
             MockActionProvider(), MockProxyAttack(), MockSanitizer(), config
         )
-        action = ToolCall(name="send_money", arguments={}, raw_text="send_money")
+        # book_flight is NOT in privileged_tools, so it should skip defense
+        action = ToolCall(name="book_flight", arguments={}, raw_text="book_flight")
         result = await mw.guard(attack_messages, action, untrusted_tool_names=UNTRUSTED)
         assert not result.was_defended
         assert result.detection is None
+
+    @pytest.mark.asyncio
+    async def test_privileged_tool_gets_defended(self, attack_messages):
+        """When privileged_tools is set, privileged actions ARE defended."""
+        config = CausalArmorConfig(privileged_tools=frozenset({"send_money"}))
+        mw = CausalArmorMiddleware(
+            MockActionProvider(), MockProxyAttack(), MockSanitizer(), config
+        )
+        action = ToolCall(name="send_money", arguments={}, raw_text="send_money amount=10000")
+        result = await mw.guard(attack_messages, action, untrusted_tool_names=UNTRUSTED)
+        assert result.was_defended
+        assert result.detection is not None
+        assert result.detection.is_attack_detected
 
     @pytest.mark.asyncio
     async def test_context_manager(self):

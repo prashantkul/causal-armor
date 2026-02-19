@@ -16,22 +16,25 @@ async def sanitize_flagged_spans(
     ctx: StructuredContext,
     detection: DetectionResult,
     sanitizer: SanitizerProvider,
+    action: ToolCall | None = None,
 ) -> tuple[StructuredContext, dict[str, str]]:
-    """Sanitize content of **all** untrusted spans when an attack is detected.
+    """Sanitize content of flagged spans B_t(τ) (Algorithm 2, lines 13-17).
 
-    Although only *flagged* spans dominate the blocked action, injection
-    text may reside in any untrusted span.  Sanitizing every untrusted
-    span prevents the regeneration model from being re-influenced by
-    attacker-controlled content that lives in an unflagged tool result.
+    Only spans identified by the dominance-shift detector are sanitized.
+    The sanitizer is conditioned on the user request, the tool name,
+    and the proposed action Y_t (when provided).
 
     Parameters
     ----------
     ctx:
         Current structured context.
     detection:
-        Detection result (used to confirm an attack was detected).
+        Detection result identifying which spans to sanitize.
     sanitizer:
         Sanitizer provider to clean span content.
+    action:
+        The proposed action Y_t, passed to the sanitizer for
+        context-aware rewriting.
 
     Returns
     -------
@@ -41,11 +44,15 @@ async def sanitize_flagged_spans(
     sanitized_map: dict[str, str] = {}
     modified_ctx = ctx
 
-    for span_id, span in ctx.untrusted_spans.items():
+    for span_id in detection.flagged_spans:
+        span = ctx.untrusted_spans.get(span_id)
+        if span is None:
+            continue
         sanitized_content = await sanitizer.sanitize(
             user_request=ctx.user_request.content,
             tool_name=span.source_tool_name,
             untrusted_content=span.content,
+            proposed_action=action.raw_text if action else "",
         )
         modified_ctx = modified_ctx.replace_span_content(span_id, sanitized_content)
         sanitized_map[span_id] = sanitized_content
@@ -136,10 +143,10 @@ async def defend(
     sanitized_spans: dict[str, str] = {}
     cot_masked = False
 
-    # Step 1: Sanitize flagged spans
+    # Step 1: Sanitize flagged spans (conditioned on proposed action Y_t)
     if config.enable_sanitization:
         modified_ctx, sanitized_spans = await sanitize_flagged_spans(
-            modified_ctx, detection, sanitizer
+            modified_ctx, detection, sanitizer, action=action
         )
 
     # Step 2: Mask chain-of-thought

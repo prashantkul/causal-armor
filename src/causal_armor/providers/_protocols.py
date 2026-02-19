@@ -49,12 +49,20 @@ class SanitizerProvider(Protocol):
     """M_san: rewrites untrusted content to neutralise injections."""
 
     async def sanitize(
-        self, user_request: str, tool_name: str, untrusted_content: str
+        self,
+        user_request: str,
+        tool_name: str,
+        untrusted_content: str,
+        proposed_action: str = "",
     ) -> str:
         """Sanitize untrusted tool-result content.
 
         Parameters match the slots in ``SANITIZATION_USER_TEMPLATE``:
-        ``{user_request}``, ``{tool_name}``, ``{untrusted_content}``.
+        ``{user_request}``, ``{tool_name}``, ``{untrusted_content}``,
+        ``{proposed_action}``.
+
+        The proposed action Y_t gives the sanitizer context about what
+        the agent was trying to do, enabling more targeted rewriting.
 
         Returns the cleaned text with injected instructions removed.
         """

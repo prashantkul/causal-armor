@@ -98,8 +98,11 @@ class CausalArmorConfig:
 
         TOML: ``margin_tau``  |  Env: ``CAUSAL_ARMOR_MARGIN_TAU``
     privileged_tools:
-        Set of tool names T_priv whose results are trusted and skip
-        attribution.
+        Set of high-stakes tool names T_priv that require defense
+        (e.g., ``send_money``, ``execute_code``).  When configured,
+        only actions targeting these tools are defended; all other
+        tools are passed through.  When empty (default), all actions
+        are defended.
 
         TOML: ``privileged_tools``
     cot_redaction_text:

@@ -76,10 +76,13 @@ class CausalArmorMiddleware:
             Contains the original action, final (possibly regenerated)
             action, and full detection/defense metadata.
         """
-        # Step 1: Check if action targets a privileged tool (skip attribution)
+        # Step 1: Check if action targets a privileged tool.
+        # Paper: only defend actions targeting T_priv (high-stakes tools).
+        # When privileged_tools is configured, SKIP defense for tools NOT
+        # in the set.  When empty (default), defend all actions.
         if (
             self._config.privileged_tools
-            and action.name in self._config.privileged_tools
+            and action.name not in self._config.privileged_tools
         ):
             return DefenseResult(
                 original_action=action,

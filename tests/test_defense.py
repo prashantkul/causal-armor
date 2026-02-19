@@ -53,14 +53,14 @@ class TestSanitizeFlaggedSpans:
         )
 
     @pytest.mark.asyncio
-    async def test_sanitizes_all_untrusted_spans(self, attack_context):
-        """All untrusted spans are sanitized, not just flagged ones."""
+    async def test_sanitizes_only_flagged_spans(self, attack_context):
+        """Only flagged spans B_t(τ) are sanitized, matching the paper."""
         det = _make_detection(frozenset({"web_search:3"}), True)
         new_ctx, sanitized = await sanitize_flagged_spans(
             attack_context, det, MockSanitizer()
         )
-        # Every untrusted span should be sanitized
-        assert set(sanitized.keys()) == set(attack_context.untrusted_spans.keys())
+        # Only the flagged span should be sanitized
+        assert set(sanitized.keys()) == {"web_search:3"}
 
     @pytest.mark.asyncio
     async def test_multiple_flagged_spans(self):
