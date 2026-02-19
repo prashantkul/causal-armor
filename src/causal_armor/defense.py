@@ -17,17 +17,19 @@ async def sanitize_flagged_spans(
     detection: DetectionResult,
     sanitizer: SanitizerProvider,
 ) -> tuple[StructuredContext, dict[str, str]]:
-    """Sanitize content of all flagged untrusted spans.
+    """Sanitize content of **all** untrusted spans when an attack is detected.
 
-    For each flagged span, calls the sanitizer model to rewrite the
-    untrusted content with injected instructions removed.
+    Although only *flagged* spans dominate the blocked action, injection
+    text may reside in any untrusted span.  Sanitizing every untrusted
+    span prevents the regeneration model from being re-influenced by
+    attacker-controlled content that lives in an unflagged tool result.
 
     Parameters
     ----------
     ctx:
         Current structured context.
     detection:
-        Detection result identifying which spans to sanitize.
+        Detection result (used to confirm an attack was detected).
     sanitizer:
         Sanitizer provider to clean span content.
 
@@ -39,8 +41,7 @@ async def sanitize_flagged_spans(
     sanitized_map: dict[str, str] = {}
     modified_ctx = ctx
 
-    for span_id in detection.flagged_spans:
-        span = ctx.untrusted_spans[span_id]
+    for span_id, span in ctx.untrusted_spans.items():
         sanitized_content = await sanitizer.sanitize(
             user_request=ctx.user_request.content,
             tool_name=span.source_tool_name,
@@ -148,11 +149,24 @@ async def defend(
         )
         cot_masked = True
 
-    # Step 3: Regenerate action with cleaned context
+    # Step 3: Drop trailing assistant messages (blocked action proposal)
+    modified_ctx = modified_ctx.drop_trailing_assistant_messages()
+
+    # Step 4: Regenerate action with cleaned context
     _raw_text, tool_calls = await action_provider.generate(modified_ctx.full_messages)
 
-    # Use the first tool call from regeneration, or fall back to original
-    final_action = tool_calls[0] if tool_calls else action
+    if tool_calls:
+        final_action = tool_calls[0]
+        regenerated = True
+    else:
+        # Regeneration produced no tool call — block entirely rather than
+        # falling back to the original attacker-controlled action.
+        final_action = ToolCall(
+            name=action.name,
+            arguments={},
+            raw_text="",
+        )
+        regenerated = False
 
     return DefenseResult(
         original_action=action,
@@ -161,5 +175,5 @@ async def defend(
         detection=detection,
         sanitized_spans=sanitized_spans,
         cot_messages_masked=cot_masked,
-        regenerated=True,
+        regenerated=regenerated,
     )

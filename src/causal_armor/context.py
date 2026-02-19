@@ -107,11 +107,20 @@ class StructuredContext:
                 new_messages[i] = Message(
                     role=MessageRole.ASSISTANT,
                     content=redaction_text,
-                    tool_name=msg.tool_name,
-                    tool_call_id=msg.tool_call_id,
-                    metadata=msg.metadata,
                 )
         return replace(self, full_messages=tuple(new_messages))
+
+    def drop_trailing_assistant_messages(self) -> StructuredContext:
+        """Remove assistant messages from the tail of the context.
+
+        Used before regeneration so the action model starts fresh after
+        the last non-assistant message (typically the sanitized tool result)
+        rather than being influenced by the blocked action proposal.
+        """
+        msgs = list(self.full_messages)
+        while msgs and msgs[-1].role is MessageRole.ASSISTANT:
+            msgs.pop()
+        return replace(self, full_messages=tuple(msgs))
 
 
 def build_structured_context(

@@ -11,6 +11,7 @@ from causal_armor import (
     DetectionResult,
     Message,
     MessageRole,
+    ToolCall,
     build_structured_context,
     defend,
     mask_cot_after_detection,
@@ -52,13 +53,14 @@ class TestSanitizeFlaggedSpans:
         )
 
     @pytest.mark.asyncio
-    async def test_no_flagged_spans(self, attack_context):
-        det = _make_detection(frozenset(), False)
+    async def test_sanitizes_all_untrusted_spans(self, attack_context):
+        """All untrusted spans are sanitized, not just flagged ones."""
+        det = _make_detection(frozenset({"web_search:3"}), True)
         new_ctx, sanitized = await sanitize_flagged_spans(
             attack_context, det, MockSanitizer()
         )
-        assert len(sanitized) == 0
-        assert new_ctx.full_messages[3] is attack_context.full_messages[3]
+        # Every untrusted span should be sanitized
+        assert set(sanitized.keys()) == set(attack_context.untrusted_spans.keys())
 
     @pytest.mark.asyncio
     async def test_multiple_flagged_spans(self):
@@ -170,3 +172,72 @@ class TestDefend:
         assert result.was_defended
         assert not result.cot_messages_masked
         assert len(result.sanitized_spans) > 0
+
+    @pytest.mark.asyncio
+    async def test_no_fallback_to_original_on_empty_regeneration(
+        self, attack_context, malicious_action
+    ):
+        """When regeneration produces no tool call, must NOT fall back to original."""
+
+        class EmptyActionProvider:
+            async def generate(self, messages):
+                return ("I need more information.", [])
+
+        det = _make_detection(frozenset({"web_search:3"}), True)
+        config = CausalArmorConfig()
+        result = await defend(
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            EmptyActionProvider(),
+            config,
+        )
+        assert result.was_defended
+        assert not result.regenerated
+        # Must not contain the original attacker-controlled arguments
+        assert result.final_action.arguments == {}
+        assert result.final_action.name == malicious_action.name
+
+    @pytest.mark.asyncio
+    async def test_regeneration_context_has_no_attacker_artifacts(
+        self, attack_context, malicious_action
+    ):
+        """Regeneration context must not leak attacker-controlled tool-call data."""
+        captured_messages: list[tuple] = []
+
+        class CapturingActionProvider:
+            async def generate(self, messages):
+                captured_messages.append(tuple(messages))
+                return (
+                    "book_flight flight=AA123",
+                    [ToolCall(name="book_flight", arguments={"flight": "AA123"}, raw_text="book_flight flight=AA123")],
+                )
+
+        det = _make_detection(frozenset({"web_search:3"}), True)
+        config = CausalArmorConfig()
+        await defend(
+            attack_context,
+            malicious_action,
+            det,
+            MockSanitizer(),
+            CapturingActionProvider(),
+            config,
+        )
+
+        assert len(captured_messages) == 1
+        regen_msgs = captured_messages[0]
+
+        # Trailing assistant message (blocked action proposal) must be dropped
+        assert regen_msgs[-1].role is not MessageRole.ASSISTANT
+
+        # No message should carry attacker-controlled metadata or tool-call refs
+        for msg in regen_msgs:
+            if msg.role is MessageRole.ASSISTANT:
+                assert msg.tool_name is None
+                assert msg.tool_call_id is None
+                assert msg.metadata == {}
+            # Attacker values must not appear in any content
+            for field in (msg.content, str(msg.metadata)):
+                assert "XYZ" not in field
+                assert "10000" not in field
