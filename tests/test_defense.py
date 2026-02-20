@@ -211,11 +211,13 @@ class TestDefend:
                 captured_messages.append(tuple(messages))
                 return (
                     "book_flight flight=AA123",
-                    [ToolCall(
-                        name="book_flight",
-                        arguments={"flight": "AA123"},
-                        raw_text="book_flight flight=AA123",
-                    )],
+                    [
+                        ToolCall(
+                            name="book_flight",
+                            arguments={"flight": "AA123"},
+                            raw_text="book_flight flight=AA123",
+                        )
+                    ],
                 )
 
         det = _make_detection(frozenset({"web_search:3"}), True)

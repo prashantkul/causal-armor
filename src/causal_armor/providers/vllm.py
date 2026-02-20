@@ -67,9 +67,7 @@ def _normalize_action_text(action_text: str) -> str:
     return action_text
 
 
-def _extract_action_logprob(
-    logprobs_data: dict, prompt_char_len: int
-) -> float:
+def _extract_action_logprob(logprobs_data: dict, prompt_char_len: int) -> float:
     """Sum log-probs for action tokens given a single choice's logprobs."""
     token_logprobs: list[float | None] = logprobs_data["token_logprobs"]
     text_offsets: list[int] = logprobs_data.get("text_offset", [])
