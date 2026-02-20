@@ -189,7 +189,9 @@ class MockProxyBenign:
 class MockSanitizer:
     """Sanitizer that strips injections."""
 
-    async def sanitize(self, user_request, tool_name, untrusted_content, proposed_action=""):
+    async def sanitize(
+        self, user_request, tool_name, untrusted_content, proposed_action="",
+    ):
         return "Flight AA123 to Paris, $450."
 
 

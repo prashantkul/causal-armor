@@ -95,7 +95,9 @@ class TestMiddlewareGuard:
         mw = CausalArmorMiddleware(
             MockActionProvider(), MockProxyAttack(), MockSanitizer(), config
         )
-        action = ToolCall(name="send_money", arguments={}, raw_text="send_money amount=10000")
+        action = ToolCall(
+            name="send_money", arguments={}, raw_text="send_money amount=10000",
+        )
         result = await mw.guard(attack_messages, action, untrusted_tool_names=UNTRUSTED)
         assert result.was_defended
         assert result.detection is not None

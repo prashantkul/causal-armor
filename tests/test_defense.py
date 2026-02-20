@@ -56,7 +56,7 @@ class TestSanitizeFlaggedSpans:
     async def test_sanitizes_only_flagged_spans(self, attack_context):
         """Only flagged spans B_t(τ) are sanitized, matching the paper."""
         det = _make_detection(frozenset({"web_search:3"}), True)
-        new_ctx, sanitized = await sanitize_flagged_spans(
+        _new_ctx, sanitized = await sanitize_flagged_spans(
             attack_context, det, MockSanitizer()
         )
         # Only the flagged span should be sanitized
@@ -211,7 +211,11 @@ class TestDefend:
                 captured_messages.append(tuple(messages))
                 return (
                     "book_flight flight=AA123",
-                    [ToolCall(name="book_flight", arguments={"flight": "AA123"}, raw_text="book_flight flight=AA123")],
+                    [ToolCall(
+                        name="book_flight",
+                        arguments={"flight": "AA123"},
+                        raw_text="book_flight flight=AA123",
+                    )],
                 )
 
         det = _make_detection(frozenset({"web_search:3"}), True)

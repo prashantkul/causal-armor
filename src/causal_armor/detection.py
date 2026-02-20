@@ -19,7 +19,7 @@ def detect_dominant_spans(
     A span is flagged when its normalised causal influence exceeds
     the user's influence minus the margin threshold (Eq. 5):
 
-        B_t(τ) = { S ∈ S_t : Δ̄_S > Δ̄_U − τ }
+        B_t(τ) = { S in S_t : D_S > D_U - τ }
 
     Parameters
     ----------

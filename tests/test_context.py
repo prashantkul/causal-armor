@@ -192,7 +192,9 @@ class TestStructuredContext:
                 content="Calling send_money",
                 tool_name="send_money",
                 tool_call_id="call_002",
-                metadata={"tool_calls": [{"name": "send_money", "args": {"amount": 100}}]},
+                metadata={
+                    "tool_calls": [{"name": "send_money", "args": {"amount": 100}}],
+                },
             ),
         ]
         ctx = build_structured_context(msgs, frozenset({"t"}))

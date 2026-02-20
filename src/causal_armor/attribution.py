@@ -74,7 +74,7 @@ async def compute_attribution(
 
     # Build ordered list of (label, messages) for all ablation variants
     span_id_list = sorted(scoring_ctx.span_ids)
-    labels: list[str] = ["_base", "_user"] + span_id_list
+    labels: list[str] = ["_base", "_user", *span_id_list]
     message_variants: list[tuple[Message, ...]] = [
         scoring_ctx.full_messages,
         scoring_ctx.messages_without_user_request(),
@@ -85,7 +85,7 @@ async def compute_attribution(
     if batch_fn is not None:
         batch_input = [(msgs, action_text) for msgs in message_variants]
         log_probs = await batch_fn(batch_input)
-        scores: dict[str, float] = dict(zip(labels, log_probs))
+        scores: dict[str, float] = dict(zip(labels, log_probs, strict=True))
     else:
         # Fallback: concurrent individual calls
         sem = asyncio.Semaphore(max_concurrent) if max_concurrent else None
@@ -102,7 +102,7 @@ async def compute_attribution(
 
         tasks = [
             asyncio.ensure_future(_score(msgs, lbl))
-            for lbl, msgs in zip(labels, message_variants)
+            for lbl, msgs in zip(labels, message_variants, strict=True)
         ]
         results = await asyncio.gather(*tasks)
         scores = dict(results)
