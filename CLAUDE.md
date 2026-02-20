@@ -88,7 +88,7 @@ make check       # lint + typecheck + test
 
 ## Git workflow
 
-- **Main branch**: `master`
-- **PRs target**: `master`
-- **CI**: Runs on push to master and all PRs — lint, format check, typecheck, test
+- **Main branch**: `main`
+- **PRs target**: `main`
+- **CI**: Runs on push to main and all PRs — lint, format check, typecheck, test
 - Always run `make check` (or at minimum `make lint`) before committing
