@@ -121,6 +121,8 @@ class GeminiActionProvider:
             for part in response.candidates[0].content.parts:
                 if part.function_call:
                     fc = part.function_call
+                    if fc.name is None:
+                        continue
                     args = dict(fc.args) if fc.args else {}
                     tool_calls.append(
                         ToolCall(
