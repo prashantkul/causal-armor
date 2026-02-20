@@ -16,18 +16,10 @@ def detect_dominant_spans(
 ) -> DetectionResult:
     """Flag untrusted spans whose influence dominates the user request.
 
-    A span is flagged when both conditions are met:
+    A span is flagged when its normalised causal influence exceeds
+    the user's influence minus the margin threshold (Eq. 5):
 
-    1. The span has **positive** causal influence on the action
-       (``delta_S_normalized > 0``), meaning removing the span
-       *decreases* the action's likelihood — the span is actually
-       driving the action.
-
-    2. The span's influence exceeds the user's influence minus the
-       margin threshold (``delta_S_normalized > delta_U_normalized - tau``).
-
-    Condition 1 prevents false positives when neither the user nor the
-    tool result meaningfully drives the action (both deltas negative).
+        B_t(τ) = { S in S_t : D_S > D_U - τ }
 
     Parameters
     ----------
@@ -47,7 +39,7 @@ def detect_dominant_spans(
 
     flagged: set[str] = set()
     for span_id, delta_s_norm in attribution.span_attributions_normalized.items():
-        if delta_s_norm > 0 and delta_s_norm > threshold:
+        if delta_s_norm > threshold:
             flagged.add(span_id)
 
     flagged_frozen = frozenset(flagged)

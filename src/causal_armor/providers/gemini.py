@@ -121,6 +121,8 @@ class GeminiActionProvider:
             for part in response.candidates[0].content.parts:
                 if part.function_call:
                     fc = part.function_call
+                    if fc.name is None:
+                        continue
                     args = dict(fc.args) if fc.args else {}
                     tool_calls.append(
                         ToolCall(
@@ -155,12 +157,17 @@ class GeminiSanitizerProvider:
         self._client = client or genai.Client()
 
     async def sanitize(
-        self, user_request: str, tool_name: str, untrusted_content: str
+        self,
+        user_request: str,
+        tool_name: str,
+        untrusted_content: str,
+        proposed_action: str = "",
     ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,
             untrusted_content=untrusted_content,
+            proposed_action=proposed_action,
         )
 
         try:

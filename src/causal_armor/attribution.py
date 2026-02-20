@@ -3,6 +3,10 @@
 Measures how much each context component (user request, untrusted spans)
 contributes to the agent's proposed action by ablating each one and
 scoring the log-probability change via the proxy model.
+
+When the proxy supports ``log_prob_batch``, all ablation variants are
+scored in a single request (matching the paper's batched approach).
+Otherwise falls back to concurrent individual calls.
 """
 
 from __future__ import annotations
@@ -27,6 +31,9 @@ async def compute_attribution(
     For each context component (user request U, each untrusted span S_i),
     we ablate it from C_t and measure the drop in log P(action | context).
 
+    When the proxy supports ``log_prob_batch``, all variants are sent in
+    a single request.  Otherwise, falls back to concurrent individual calls.
+
     Parameters
     ----------
     ctx:
@@ -37,6 +44,7 @@ async def compute_attribution(
         Proxy model for log-prob scoring.
     max_concurrent:
         Optional cap on concurrent proxy calls. ``None`` means no limit.
+        Only used in the non-batch fallback path.
     mask_cot_for_scoring:
         If ``True``, mask assistant messages after the first untrusted
         span before LOO scoring.  This prevents the agent's own poisoned
@@ -49,8 +57,9 @@ async def compute_attribution(
         Full attribution with per-component deltas.
     """
     action_text = action.raw_text
-    # Rough token count approximation (word-level split, per paper)
-    action_token_count = max(len(action_text.split()), 1)
+    # Approximate token count: subword tokenizers average ~4 chars/token.
+    # This is closer to true |Y_t| than a word-count split.
+    action_token_count = max(len(action_text) // 4, 1)
 
     # Optionally mask CoT before LOO scoring.  In multi-turn conversations
     # the agent's reasoning may propagate injected instructions (e.g. the
@@ -63,39 +72,40 @@ async def compute_attribution(
         k_min = min(span.context_index for span in ctx.untrusted_spans.values())
         scoring_ctx = ctx.mask_assistant_messages_after(k_min, "[Reasoning redacted]")
 
-    sem = asyncio.Semaphore(max_concurrent) if max_concurrent else None
+    # Build ordered list of (label, messages) for all ablation variants
+    span_id_list = sorted(scoring_ctx.span_ids)
+    labels: list[str] = ["_base", "_user", *span_id_list]
+    message_variants: list[tuple[Message, ...]] = [
+        scoring_ctx.full_messages,
+        scoring_ctx.messages_without_user_request(),
+    ] + [scoring_ctx.messages_without_span(sid) for sid in span_id_list]
 
-    async def _score(messages: tuple[Message, ...], label: str) -> tuple[str, float]:
-        if sem:
-            async with sem:
+    # Try batched scoring first (single HTTP request)
+    batch_fn = getattr(proxy, "log_prob_batch", None)
+    if batch_fn is not None:
+        batch_input = [(msgs, action_text) for msgs in message_variants]
+        log_probs = await batch_fn(batch_input)
+        scores: dict[str, float] = dict(zip(labels, log_probs, strict=True))
+    else:
+        # Fallback: concurrent individual calls
+        sem = asyncio.Semaphore(max_concurrent) if max_concurrent else None
+
+        async def _score(
+            messages: tuple[Message, ...], label: str
+        ) -> tuple[str, float]:
+            if sem:
+                async with sem:
+                    lp = await proxy.log_prob(messages, action_text)
+            else:
                 lp = await proxy.log_prob(messages, action_text)
-        else:
-            lp = await proxy.log_prob(messages, action_text)
-        return label, lp
+            return label, lp
 
-    # Build all ablation variants
-    tasks: list[asyncio.Task[tuple[str, float]]] = []
-
-    # Base: full context (CoT-masked)
-    tasks.append(asyncio.ensure_future(_score(scoring_ctx.full_messages, "_base")))
-
-    # User-ablated
-    tasks.append(
-        asyncio.ensure_future(
-            _score(scoring_ctx.messages_without_user_request(), "_user")
-        )
-    )
-
-    # Span-ablated (one per untrusted span)
-    for span_id in scoring_ctx.span_ids:
-        tasks.append(
-            asyncio.ensure_future(
-                _score(scoring_ctx.messages_without_span(span_id), span_id)
-            )
-        )
-
-    results = await asyncio.gather(*tasks)
-    scores: dict[str, float] = dict(results)
+        tasks = [
+            asyncio.ensure_future(_score(msgs, lbl))
+            for lbl, msgs in zip(labels, message_variants, strict=True)
+        ]
+        results = await asyncio.gather(*tasks)
+        scores = dict(results)
 
     base_lp = scores["_base"]
     user_ablated_lp = scores["_user"]

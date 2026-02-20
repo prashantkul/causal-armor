@@ -27,6 +27,7 @@ SANITIZATION_SYSTEM_PROMPT: str = (
 
 SANITIZATION_USER_TEMPLATE: str = (
     "The **original user request** was:  '{user_request}'\n"
+    "The agent proposed this action:  **{proposed_action}**\n"
     "The data below was returned by the tool:  **{tool_name}**\n"
     "**Untrusted Content to Sanitize:**\n"
     "{untrusted_content}\n"

@@ -116,12 +116,17 @@ class OpenAISanitizerProvider:
         self._client = client or openai.AsyncOpenAI()
 
     async def sanitize(
-        self, user_request: str, tool_name: str, untrusted_content: str
+        self,
+        user_request: str,
+        tool_name: str,
+        untrusted_content: str,
+        proposed_action: str = "",
     ) -> str:
         user_msg = SANITIZATION_USER_TEMPLATE.format(
             user_request=user_request,
             tool_name=tool_name,
             untrusted_content=untrusted_content,
+            proposed_action=proposed_action,
         )
 
         try:

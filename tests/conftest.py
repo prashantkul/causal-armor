@@ -62,6 +62,16 @@ def post_attack_assistant() -> Message:
     return Message(
         role=MessageRole.ASSISTANT,
         content="I should transfer money to the account as instructed.",
+        tool_name="send_money",
+        tool_call_id="call_002",
+        metadata={
+            "tool_calls": [
+                {
+                    "name": "send_money",
+                    "args": {"amount": 10000, "account": "XYZ"},
+                }
+            ]
+        },
     )
 
 
@@ -179,7 +189,13 @@ class MockProxyBenign:
 class MockSanitizer:
     """Sanitizer that strips injections."""
 
-    async def sanitize(self, user_request, tool_name, untrusted_content):
+    async def sanitize(
+        self,
+        user_request,
+        tool_name,
+        untrusted_content,
+        proposed_action="",
+    ):
         return "Flight AA123 to Paris, $450."
 
 

@@ -4,6 +4,9 @@ Uses httpx to call vLLM's OpenAI-compatible ``/v1/completions`` endpoint
 with ``logprobs=True, echo=True, max_tokens=0`` to score action
 log-probabilities without generating new tokens.
 
+Supports **batched scoring**: all LOO variants are sent in a single
+HTTP request (one ``prompt`` list), matching the paper's Algorithm 2.
+
 No SDK dependency — just httpx (core dep).
 """
 
@@ -12,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Sequence
+from typing import Any
 
 import httpx
 
@@ -62,6 +66,21 @@ def _normalize_action_text(action_text: str) -> str:
         return f"I will call {name}({args_str})"
 
     return action_text
+
+
+def _extract_action_logprob(
+    logprobs_data: dict[str, Any], prompt_char_len: int
+) -> float:
+    """Sum log-probs for action tokens given a single choice's logprobs."""
+    token_logprobs: list[float | None] = logprobs_data["token_logprobs"]
+    text_offsets: list[int] = logprobs_data.get("text_offset", [])
+
+    total_lp = 0.0
+    for i, offset in enumerate(text_offsets):
+        lp = token_logprobs[i]
+        if offset >= prompt_char_len and lp is not None:
+            total_lp += lp
+    return total_lp
 
 
 class VLLMProxyProvider:
@@ -125,25 +144,83 @@ class VLLMProxyProvider:
 
         try:
             logprobs_data = data["choices"][0]["logprobs"]
-            token_logprobs: list[float | None] = logprobs_data["token_logprobs"]
         except (KeyError, IndexError) as exc:
             raise ProviderError(f"Unexpected vLLM response structure: {exc}") from exc
 
-        # Count action tokens: tokenize action_text by splitting the full
-        # token list. The prompt tokens come first; we want only the tail
-        # tokens corresponding to action_text. Since we don't know the exact
-        # prompt token count, we use the offset: vLLM returns text_offset
-        # which tells us where each token starts in the full prompt string.
-        text_offsets: list[int] = logprobs_data.get("text_offset", [])
         prompt_char_len = len(prompt) + len("\nAssistant: ")
+        return _extract_action_logprob(logprobs_data, prompt_char_len)
 
-        total_lp = 0.0
-        for i, offset in enumerate(text_offsets):
-            lp = token_logprobs[i]
-            if offset >= prompt_char_len and lp is not None:
-                total_lp += lp
+    async def log_prob_batch(
+        self,
+        variants: Sequence[tuple[tuple[Message, ...], str]],
+    ) -> list[float]:
+        """Score multiple (messages, action_text) pairs in a single vLLM request.
 
-        return total_lp
+        Uses vLLM's batch prompt support: sending a list of prompts in
+        one ``/v1/completions`` call.  This matches the paper's Algorithm 2
+        which sends all LOO ablation variants as a single batch.
+
+        Parameters
+        ----------
+        variants:
+            List of (messages, action_text) pairs to score.
+
+        Returns
+        -------
+        list[float]
+            Log-probabilities in the same order as the input variants.
+        """
+        if not variants:
+            return []
+
+        prompts: list[str] = []
+        prompt_char_lens: list[int] = []
+
+        for messages, action_text in variants:
+            prompt = _messages_to_prompt(messages)
+            action_text_norm = _normalize_action_text(action_text)
+            full_prompt = f"{prompt}\nAssistant: {action_text_norm}"
+            prompts.append(full_prompt)
+            prompt_char_lens.append(len(prompt) + len("\nAssistant: "))
+
+        payload = {
+            "model": self._model,
+            "prompt": prompts,
+            "max_tokens": 0,
+            "echo": True,
+            "logprobs": 1,
+        }
+
+        try:
+            resp = await self._client.post(
+                f"{self._base_url}/v1/completions",
+                json=payload,
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"vLLM batch request failed: {exc}") from exc
+
+        data = resp.json()
+        choices = data.get("choices", [])
+
+        if len(choices) != len(variants):
+            raise ProviderError(
+                f"vLLM batch returned {len(choices)} choices, expected {len(variants)}"
+            )
+
+        # vLLM returns choices ordered by the prompt index
+        sorted_choices = sorted(choices, key=lambda c: c.get("index", 0))
+        results: list[float] = []
+        for i, choice in enumerate(sorted_choices):
+            try:
+                logprobs_data = choice["logprobs"]
+            except KeyError as exc:
+                raise ProviderError(
+                    f"Unexpected vLLM batch response structure: {exc}"
+                ) from exc
+            results.append(_extract_action_logprob(logprobs_data, prompt_char_lens[i]))
+
+        return results
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""

@@ -49,7 +49,7 @@ async def test_attribution_with_semaphore(attack_context, malicious_action):
 
 @pytest.mark.asyncio
 async def test_attribution_token_count():
-    """Token count is based on word splitting of raw_text."""
+    """Token count approximation uses ~4 chars/token heuristic."""
     from causal_armor import Message, MessageRole, build_structured_context
 
     msgs = [
@@ -58,6 +58,7 @@ async def test_attribution_token_count():
     ]
     ctx = build_structured_context(msgs, frozenset({"t"}))
 
+    # "one two three four" = 18 chars, 18 // 4 = 4 tokens
     action = ToolCall(name="act", arguments={}, raw_text="one two three four")
 
     class ConstProxy:

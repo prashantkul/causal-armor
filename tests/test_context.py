@@ -181,3 +181,56 @@ class TestStructuredContext:
         assert len(ctx.untrusted_spans) == 2
         assert "t:1" in ctx.span_ids
         assert "t:2" in ctx.span_ids
+
+    def test_mask_clears_tool_call_artifacts(self):
+        """Masked assistant messages must not retain tool-call metadata."""
+        msgs = [
+            Message(role=MessageRole.USER, content="Go"),
+            Message(role=MessageRole.TOOL, content="data", tool_name="t"),
+            Message(
+                role=MessageRole.ASSISTANT,
+                content="Calling send_money",
+                tool_name="send_money",
+                tool_call_id="call_002",
+                metadata={
+                    "tool_calls": [{"name": "send_money", "args": {"amount": 100}}],
+                },
+            ),
+        ]
+        ctx = build_structured_context(msgs, frozenset({"t"}))
+        masked = ctx.mask_assistant_messages_after(1, "[REDACTED]")
+        redacted_msg = masked.full_messages[2]
+        assert redacted_msg.content == "[REDACTED]"
+        assert redacted_msg.tool_name is None
+        assert redacted_msg.tool_call_id is None
+        assert redacted_msg.metadata == {}
+
+    def test_drop_trailing_assistant_messages(self):
+        ctx = self._make_ctx()
+        # Original ends with assistant at index 4
+        assert ctx.full_messages[-1].role == MessageRole.ASSISTANT
+        trimmed = ctx.drop_trailing_assistant_messages()
+        # Should now end with the tool message at index 3
+        assert trimmed.full_messages[-1].role == MessageRole.TOOL
+        assert len(trimmed.full_messages) == 4
+
+    def test_drop_trailing_no_assistant_at_end(self):
+        msgs = [
+            Message(role=MessageRole.USER, content="Go"),
+            Message(role=MessageRole.TOOL, content="data", tool_name="t"),
+        ]
+        ctx = build_structured_context(msgs, frozenset({"t"}))
+        trimmed = ctx.drop_trailing_assistant_messages()
+        assert len(trimmed.full_messages) == 2
+
+    def test_drop_trailing_multiple_assistants(self):
+        msgs = [
+            Message(role=MessageRole.USER, content="Go"),
+            Message(role=MessageRole.TOOL, content="data", tool_name="t"),
+            Message(role=MessageRole.ASSISTANT, content="Step 1"),
+            Message(role=MessageRole.ASSISTANT, content="Step 2"),
+        ]
+        ctx = build_structured_context(msgs, frozenset({"t"}))
+        trimmed = ctx.drop_trailing_assistant_messages()
+        assert len(trimmed.full_messages) == 2
+        assert trimmed.full_messages[-1].role == MessageRole.TOOL

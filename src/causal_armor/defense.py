@@ -16,11 +16,13 @@ async def sanitize_flagged_spans(
     ctx: StructuredContext,
     detection: DetectionResult,
     sanitizer: SanitizerProvider,
+    action: ToolCall | None = None,
 ) -> tuple[StructuredContext, dict[str, str]]:
-    """Sanitize content of all flagged untrusted spans.
+    """Sanitize content of flagged spans B_t(τ) (Algorithm 2, lines 13-17).
 
-    For each flagged span, calls the sanitizer model to rewrite the
-    untrusted content with injected instructions removed.
+    Only spans identified by the dominance-shift detector are sanitized.
+    The sanitizer is conditioned on the user request, the tool name,
+    and the proposed action Y_t (when provided).
 
     Parameters
     ----------
@@ -30,6 +32,9 @@ async def sanitize_flagged_spans(
         Detection result identifying which spans to sanitize.
     sanitizer:
         Sanitizer provider to clean span content.
+    action:
+        The proposed action Y_t, passed to the sanitizer for
+        context-aware rewriting.
 
     Returns
     -------
@@ -40,11 +45,14 @@ async def sanitize_flagged_spans(
     modified_ctx = ctx
 
     for span_id in detection.flagged_spans:
-        span = ctx.untrusted_spans[span_id]
+        span = ctx.untrusted_spans.get(span_id)
+        if span is None:
+            continue
         sanitized_content = await sanitizer.sanitize(
             user_request=ctx.user_request.content,
             tool_name=span.source_tool_name,
             untrusted_content=span.content,
+            proposed_action=action.raw_text if action else "",
         )
         modified_ctx = modified_ctx.replace_span_content(span_id, sanitized_content)
         sanitized_map[span_id] = sanitized_content
@@ -135,10 +143,10 @@ async def defend(
     sanitized_spans: dict[str, str] = {}
     cot_masked = False
 
-    # Step 1: Sanitize flagged spans
+    # Step 1: Sanitize flagged spans (conditioned on proposed action Y_t)
     if config.enable_sanitization:
         modified_ctx, sanitized_spans = await sanitize_flagged_spans(
-            modified_ctx, detection, sanitizer
+            modified_ctx, detection, sanitizer, action=action
         )
 
     # Step 2: Mask chain-of-thought
@@ -148,11 +156,24 @@ async def defend(
         )
         cot_masked = True
 
-    # Step 3: Regenerate action with cleaned context
+    # Step 3: Drop trailing assistant messages (blocked action proposal)
+    modified_ctx = modified_ctx.drop_trailing_assistant_messages()
+
+    # Step 4: Regenerate action with cleaned context
     _raw_text, tool_calls = await action_provider.generate(modified_ctx.full_messages)
 
-    # Use the first tool call from regeneration, or fall back to original
-    final_action = tool_calls[0] if tool_calls else action
+    if tool_calls:
+        final_action = tool_calls[0]
+        regenerated = True
+    else:
+        # Regeneration produced no tool call — block entirely rather than
+        # falling back to the original attacker-controlled action.
+        final_action = ToolCall(
+            name=action.name,
+            arguments={},
+            raw_text="",
+        )
+        regenerated = False
 
     return DefenseResult(
         original_action=action,
@@ -161,5 +182,5 @@ async def defend(
         detection=detection,
         sanitized_spans=sanitized_spans,
         cot_messages_masked=cot_masked,
-        regenerated=True,
+        regenerated=regenerated,
     )
