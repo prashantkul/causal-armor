@@ -33,9 +33,13 @@ def _to_gemini_contents(
     """Convert CausalArmor messages to Gemini content format.
 
     Returns (system_instruction, contents).
+
+    TOOL-role messages are represented as plain user messages with a
+    ``[Tool: name]`` prefix.  Consecutive same-role contents are merged
+    so the API never sees adjacent entries with the same role.
     """
     system_instruction: str | None = None
-    contents: list[genai_types.Content] = []
+    raw: list[genai_types.Content] = []
 
     for m in messages:
         if m.role is MessageRole.SYSTEM:
@@ -44,27 +48,41 @@ def _to_gemini_contents(
             else:
                 system_instruction += "\n" + m.content
         elif m.role is MessageRole.USER:
-            contents.append(
+            raw.append(
                 genai_types.Content(
                     role="user", parts=[genai_types.Part(text=m.content)]
                 )
             )
         elif m.role is MessageRole.ASSISTANT:
-            contents.append(
+            raw.append(
                 genai_types.Content(
                     role="model", parts=[genai_types.Part(text=m.content)]
                 )
             )
         elif m.role is MessageRole.TOOL:
-            # Represent tool results as user messages with context
             label = f"[Tool: {m.tool_name}] " if m.tool_name else ""
-            contents.append(
+            raw.append(
                 genai_types.Content(
                     role="user", parts=[genai_types.Part(text=f"{label}{m.content}")]
                 )
             )
 
-    return system_instruction, contents
+    # Merge consecutive same-role contents
+    merged: list[genai_types.Content] = []
+    for c in raw:
+        prev_parts = merged[-1].parts if merged else None
+        curr_parts = c.parts
+        if merged and merged[-1].role == c.role and prev_parts and curr_parts:
+            prev_text = prev_parts[0].text or ""
+            curr_text = curr_parts[0].text or ""
+            merged[-1] = genai_types.Content(
+                role=c.role,
+                parts=[genai_types.Part(text=f"{prev_text}\n{curr_text}")],
+            )
+        else:
+            merged.append(c)
+
+    return system_instruction, merged
 
 
 class GeminiActionProvider:

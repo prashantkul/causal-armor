@@ -33,9 +33,15 @@ def _to_anthropic_messages(
 
     Returns (system_prompt, messages) since Anthropic takes system as a
     separate parameter.
+
+    TOOL-role messages are converted to plain-text user messages with a
+    ``[Tool: name]`` prefix so they remain valid without a preceding
+    assistant ``tool_use`` block (which may have been redacted during
+    the defense pipeline).  Consecutive same-role messages are merged
+    to satisfy the API constraint against adjacent duplicates.
     """
     system_prompt: str | None = None
-    result: list[dict[str, Any]] = []
+    raw: list[dict[str, Any]] = []
 
     for m in messages:
         if m.role is MessageRole.SYSTEM:
@@ -44,25 +50,23 @@ def _to_anthropic_messages(
                 system_prompt = m.content
             else:
                 system_prompt += "\n" + m.content
-        elif m.role is MessageRole.USER:
-            result.append({"role": "user", "content": m.content})
-        elif m.role is MessageRole.ASSISTANT:
-            result.append({"role": "assistant", "content": m.content})
         elif m.role is MessageRole.TOOL:
-            result.append(
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": m.tool_call_id or "",
-                            "content": m.content,
-                        }
-                    ],
-                }
-            )
+            label = f"[Tool: {m.tool_name}] " if m.tool_name else ""
+            raw.append({"role": "user", "content": f"{label}{m.content}"})
+        elif m.role is MessageRole.USER:
+            raw.append({"role": "user", "content": m.content})
+        elif m.role is MessageRole.ASSISTANT:
+            raw.append({"role": "assistant", "content": m.content})
 
-    return system_prompt, result
+    # Merge consecutive same-role messages
+    merged: list[dict[str, Any]] = []
+    for msg in raw:
+        if merged and merged[-1]["role"] == msg["role"]:
+            merged[-1]["content"] += "\n" + msg["content"]
+        else:
+            merged.append(msg)
+
+    return system_prompt, merged
 
 
 class AnthropicActionProvider:
