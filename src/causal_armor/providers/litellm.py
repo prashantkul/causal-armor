@@ -28,14 +28,30 @@ except ImportError as exc:
 
 
 def _to_litellm_messages(messages: Sequence[Message]) -> list[dict[str, Any]]:
-    """Convert CausalArmor messages to LiteLLM chat format."""
-    result: list[dict[str, Any]] = []
+    """Convert CausalArmor messages to LiteLLM chat format.
+
+    TOOL-role messages are converted to plain user messages with a
+    ``[Tool: name]`` prefix so they remain valid without a preceding
+    assistant ``tool_calls`` entry (which may have been redacted during
+    the defense pipeline).  Consecutive same-role messages are merged
+    to satisfy the API constraint against adjacent duplicates.
+    """
+    raw: list[dict[str, Any]] = []
     for m in messages:
-        msg: dict[str, Any] = {"role": m.role.value, "content": m.content}
         if m.role is MessageRole.TOOL:
-            msg["tool_call_id"] = m.tool_call_id or ""
-        result.append(msg)
-    return result
+            label = f"[Tool: {m.tool_name}] " if m.tool_name else ""
+            raw.append({"role": "user", "content": f"{label}{m.content}"})
+        else:
+            raw.append({"role": m.role.value, "content": m.content})
+
+    # Merge consecutive same-role messages
+    merged: list[dict[str, Any]] = []
+    for msg in raw:
+        if merged and merged[-1]["role"] == msg["role"]:
+            merged[-1]["content"] += "\n" + msg["content"]
+        else:
+            merged.append(msg)
+    return merged
 
 
 class LiteLLMActionProvider:
