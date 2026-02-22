@@ -56,14 +56,24 @@ def _to_openai_messages(messages: Sequence[Message]) -> list[dict[str, Any]]:
 class OpenAIActionProvider:
     """Action provider using OpenAI's chat completions API.
 
+    Works with OpenAI, OpenRouter, and any OpenAI-compatible API.
+
     Parameters
     ----------
     model:
-        OpenAI model name (e.g. ``"gpt-4o"``).
+        Model name (e.g. ``"gpt-4o"``, ``"google/gemini-2.5-flash"``).
     tools:
         OpenAI tool definitions for function calling.
     client:
-        Optional pre-configured ``AsyncOpenAI`` client.
+        Optional pre-configured ``AsyncOpenAI`` client.  When provided,
+        *base_url* and *api_key* are ignored.
+    base_url:
+        Override the API base URL for OpenAI-compatible services
+        (e.g. ``"https://openrouter.ai/api/v1"``).  Falls back to
+        ``OPENAI_BASE_URL`` / the SDK default.
+    api_key:
+        Override the API key.  Falls back to ``OPENAI_API_KEY`` /
+        the SDK default.
     """
 
     def __init__(
@@ -71,10 +81,21 @@ class OpenAIActionProvider:
         model: str | None = None,
         tools: list[dict[str, Any]] | None = None,
         client: openai.AsyncOpenAI | None = None,
+        *,
+        base_url: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         self._model = model or os.environ.get("CAUSAL_ARMOR_ACTION_MODEL", "gpt-4o")
         self._tools = tools
-        self._client = client or openai.AsyncOpenAI()
+        if client is not None:
+            self._client = client
+        else:
+            kwargs: dict[str, Any] = {}
+            if base_url is not None:
+                kwargs["base_url"] = base_url
+            if api_key is not None:
+                kwargs["api_key"] = api_key
+            self._client = openai.AsyncOpenAI(**kwargs)
 
     async def generate(self, messages: Sequence[Message]) -> tuple[str, list[ToolCall]]:
         kwargs: dict[str, Any] = {
@@ -113,23 +134,44 @@ class OpenAIActionProvider:
 class OpenAISanitizerProvider:
     """Sanitizer provider using OpenAI's chat completions API.
 
+    Works with OpenAI, OpenRouter, and any OpenAI-compatible API.
+
     Parameters
     ----------
     model:
-        OpenAI model name (e.g. ``"gpt-4o-mini"``).
+        Model name (e.g. ``"gpt-4o-mini"``, ``"google/gemini-2.5-flash"``).
     client:
-        Optional pre-configured ``AsyncOpenAI`` client.
+        Optional pre-configured ``AsyncOpenAI`` client.  When provided,
+        *base_url* and *api_key* are ignored.
+    base_url:
+        Override the API base URL for OpenAI-compatible services
+        (e.g. ``"https://openrouter.ai/api/v1"``).  Falls back to
+        ``OPENAI_BASE_URL`` / the SDK default.
+    api_key:
+        Override the API key.  Falls back to ``OPENAI_API_KEY`` /
+        the SDK default.
     """
 
     def __init__(
         self,
         model: str | None = None,
         client: openai.AsyncOpenAI | None = None,
+        *,
+        base_url: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         self._model = model or os.environ.get(
             "CAUSAL_ARMOR_SANITIZER_MODEL", "gpt-4o-mini"
         )
-        self._client = client or openai.AsyncOpenAI()
+        if client is not None:
+            self._client = client
+        else:
+            kwargs: dict[str, Any] = {}
+            if base_url is not None:
+                kwargs["base_url"] = base_url
+            if api_key is not None:
+                kwargs["api_key"] = api_key
+            self._client = openai.AsyncOpenAI(**kwargs)
 
     async def sanitize(
         self,
