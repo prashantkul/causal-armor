@@ -1,8 +1,8 @@
 # CausalArmor
 
 [![CI](https://github.com/prashantkul/causal-armor/actions/workflows/ci.yml/badge.svg)](https://github.com/prashantkul/causal-armor/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/causal-armor)](https://pypi.org/project/causal-armor/)
-[![Python versions](https://img.shields.io/pypi/pyversions/causal-armor)](https://pypi.org/project/causal-armor/)
+[![PyPI version](https://img.shields.io/pypi/v/causal-armor?cacheBust=1)](https://pypi.org/project/causal-armor/)
+[![Python versions](https://img.shields.io/pypi/pyversions/causal-armor?cacheBust=1)](https://pypi.org/project/causal-armor/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/prashantkul/causal-armor/blob/master/LICENSE)
 [![arXiv](https://img.shields.io/badge/arXiv-2602.07918-b31b1b.svg)](https://arxiv.org/abs/2602.07918)
 
