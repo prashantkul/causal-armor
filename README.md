@@ -128,9 +128,11 @@ s = OpenAISanitizerProvider(model="gpt-4o-mini")  # uses gpt-4o-mini
 
 ## Documentation
 
+- **[Benchmark Results](https://github.com/prashantkul/causal-armor/blob/master/docs/benchmark-results.md)** — AgentDojo evaluation: 11,322 scenarios across 3 providers, 4 suites, 3 runs. 18-24pp ASR reduction with utility preserved.
 - **[How Attribution Works](https://github.com/prashantkul/causal-armor/blob/master/docs/how-attribution-works.md)** — Plain-English guide to the core mechanism. Start here.
 - **[Paper Models Reference](https://github.com/prashantkul/causal-armor/blob/master/docs/paper-models-reference.md)** — All models used in the paper and their roles.
 - **[vLLM Setup Guide](https://github.com/prashantkul/causal-armor/blob/master/docs/vllm-setup.md)** — Setting up the proxy model server.
+- **[OpenAI-Compatible APIs](https://github.com/prashantkul/causal-armor/blob/master/docs/openai-compatible-apis.md)** — Using OpenRouter, Azure OpenAI, Together AI, and other OpenAI-compatible services.
 
 ## Architecture
 
