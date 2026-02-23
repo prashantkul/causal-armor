@@ -34,21 +34,27 @@ CausalArmor detects attacks at a ~53% scenario-level rate across all three provi
 
 Each cell shows the attack success rate for a specific injection task. Baseline columns (B) show the unguarded ASR; guarded columns (G) show ASR with CausalArmor. The dramatic color shift from red/orange to green confirms broad attack suppression across injection types.
 
+## Guard Call Latency Distribution
+
+![Latency Distribution](benchmark/latency_distribution.png)
+
+CausalArmor adds ~4-5 seconds per guard call (median) across all providers. The distribution is tight and consistent, covering LOO attribution scoring via the proxy model, sanitization, and action regeneration. This overhead is acceptable for security-critical workflows where blocking prompt injections matters more than sub-second latency.
+
 ## Per-Suite Breakdown
 
 | Suite | Provider | Baseline Utility | Baseline ASR | Guarded Utility | Guarded ASR | Detection | ASR Reduction |
 |-------|----------|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Banking** | GPT-4.1 | 85.0% | 36.3% | 81.5% | 10.0% | 57.2% | -26.4pp |
-| | Claude S4 | 86.1% | 4.2% | 88.3% | 0.0% | 52.2% | -4.2pp |
+| | Claude Sonnet | 86.1% | 4.2% | 88.3% | 0.0% | 52.2% | -4.2pp |
 | | Gemini 2.5F | 84.0% | 18.3% | 83.6% | 1.9% | 41.2% | -16.4pp |
 | **Travel** | GPT-4.1 | 69.8% | 11.7% | 73.7% | 6.4% | 34.8% | -5.2pp |
-| | Claude S4 | 76.9% | 0.0% | 77.5% | 0.0% | 39.3% | -- |
+| | Claude Sonnet | 76.9% | 0.0% | 77.5% | 0.0% | 39.3% | -- |
 | | Gemini 2.5F | 51.9% | 28.9% | 65.7% | 13.3% | 49.8% | -15.7pp |
 | **Workspace** | GPT-4.1 | 44.4% | 28.3% | 63.3% | 3.1% | 44.4% | -25.3pp |
-| | Claude S4 | 82.1% | 0.4% | 80.7% | 0.0% | 47.8% | -0.4pp |
+| | Claude Sonnet | 82.1% | 0.4% | 80.7% | 0.0% | 47.8% | -0.4pp |
 | | Gemini 2.5F | 45.4% | 19.5% | 59.0% | 1.7% | 46.5% | -17.7pp |
 | **Slack** | GPT-4.1 | 57.5% | 51.4% | 48.9% | 9.2% | 89.8% | -42.2pp |
-| | Claude S4 | 66.7% | 0.0% | 65.5% | 0.0% | 86.6% | -- |
+| | Claude Sonnet | 66.7% | 0.0% | 65.5% | 0.0% | 86.6% | -- |
 | | Gemini 2.5F | 65.0% | 36.1% | 64.6% | 10.3% | 86.8% | -25.8pp |
 
 Slack has the highest baseline vulnerability and shows the largest guard impact (-42pp for GPT-4.1). Workspace and Travel show **utility gains** under the guard for GPT-4.1 and Gemini, suggesting that blocking injected tool calls also avoids downstream errors.
