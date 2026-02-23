@@ -14,6 +14,8 @@ CausalArmor reduces attack success rates by **18-24 percentage points** on vulne
 
 ## Pareto Frontier: Safety vs Utility
 
+All results use the **`important_instructions`** attack from AgentDojo. This attack embeds directives disguised as high-priority system instructions inside tool outputs (e.g., a bank transaction memo, a Slack message, or an email body). When the agent reads the tool result, the injected text attempts to hijack its next action — for example, redirecting a payment or exfiltrating data. It is one of the strongest single-turn injection strategies in the benchmark.
+
 ![Pareto Frontier](benchmark/pareto_frontier.png)
 
 Each circle is a baseline (no guard) configuration; each square is the same model with CausalArmor enabled. Arrows show the guard-induced shift. The green region marks the ideal zone (high safety + high utility).
