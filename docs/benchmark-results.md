@@ -12,6 +12,12 @@ Evaluation of CausalArmor on [AgentDojo](https://github.com/ethz-spylab/agentdoj
 
 CausalArmor reduces attack success rates by **18-24 percentage points** on vulnerable models while **preserving or improving utility**. Claude Sonnet 4 is already near-immune to `important_instructions` attacks; CausalArmor still catches injections there (53.5% detection) without degrading performance.
 
+## Utility & Attack Success Rate by Provider
+
+![Utility and ASR Bars](benchmark/utility_asr_bars.png)
+
+CausalArmor reduces ASR by 24pp (GPT-4.1) and 18pp (Gemini 2.5 Flash) while preserving or improving utility. Claude Sonnet 4 maintains near-zero ASR with no meaningful utility change.
+
 ## Pareto Frontier: Safety vs Utility
 
 All results use the **`important_instructions`** attack from AgentDojo. This attack embeds directives disguised as high-priority system instructions inside tool outputs (e.g., a bank transaction memo, a Slack message, or an email body). When the agent reads the tool result, the injected text attempts to hijack its next action — for example, redirecting a payment or exfiltrating data. It is one of the strongest single-turn injection strategies in the benchmark.
